@@ -56,6 +56,8 @@ Every variable declared in Setup code is visible from Teardown code.
 #ifndef INSTANTUNIT_HDR_
 #define INSTANTUNIT_HDR_
 
+#include <cstddef>
+
 ///helper macro to concatenate expanded macro arguments
 #define IU_CAT_ID_EXPANDED_HELPER(a,b) a##b
 ///Expand and concatenate macro arguments
@@ -65,7 +67,7 @@ Every variable declared in Setup code is visible from Teardown code.
 ///Simple test
 /** Place test code in braces after IU_TEST */
 #define IU_TEST(testNameString) \
-    class IU_CAT_ID(Test_,__LINE__): private InstantUnit::Runnabe{ \
+    class IU_CAT_ID(Test_,__LINE__): private InstantUnit::Runnable{ \
         virtual void Run(); \
     }; \
     IU_CAT_ID(Test_,__LINE__) IU_CAT_ID(Instance_,__LINE__); \
@@ -128,10 +130,10 @@ private:
     InstanceListBase* next;
 
     //ban dynamic allocation
-    /*void* operator new(size_t);          // standard new
+    void* operator new(size_t);          // standard new
     void* operator new(size_t, void*);   // placement new
     void* operator new[](size_t);        // array new
-    void* operator new[](size_t, void*); // placement array new*/
+    void* operator new[](size_t, void*); // placement array new
 };
 
 template<class T>
@@ -141,17 +143,17 @@ InstanceListBase<T>* *InstanceListBase<T>::pointerToTailPtr = &InstanceListBase<
 
 
 ///Base class to be executed while running tests
-class Runnabe: public InstanceListBase<Runnabe>{
+class Runnable: public InstanceListBase<Runnable>{
 protected:
-    ///Mandatory test to be runned
+    ///Method to be runned for all found Runnable instances
     virtual void Run() = 0;
 private:
     friend void Run();
 };
 
 inline void Run(){
-    InstanceListBase<Runnabe>::ForEachInstance(
-        [](Runnabe* ptr){
+    InstanceListBase<Runnable>::ForEachInstance(
+        [](Runnable* ptr){
             ptr->Run();
         }
     );
