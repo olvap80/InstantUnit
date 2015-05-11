@@ -57,6 +57,7 @@ Every variable declared in Setup code is visible from Teardown code.
 #define INSTANTUNIT_HDR_
 
 #include <cstddef>
+#include <stdexcept>
 
 ///helper macro to concatenate expanded macro arguments
 #define IU_CAT_ID_EXPANDED_HELPER(a,b) a##b
@@ -67,11 +68,11 @@ Every variable declared in Setup code is visible from Teardown code.
 ///Simple test
 /** Place test code in braces after IU_TEST */
 #define IU_TEST(testNameString) \
-    class IU_CAT_ID(Test_,__LINE__): private InstantUnit::Runnable{ \
-        virtual void Run(); \
+    class IU_CAT_ID(Test_,__LINE__): private InstantUnit::SimpleRunner{ \
+        virtual void DoTest(); \
     }; \
     IU_CAT_ID(Test_,__LINE__) IU_CAT_ID(Instance_,__LINE__); \
-    void IU_CAT_ID(Test_,__LINE__)::Run()
+    void IU_CAT_ID(Test_,__LINE__)::DoTest()
 
 ///Group test cases together to support common setup/teardown
 /**Place test setup, then test cases and then teardown in braces after IU_TEST.
@@ -130,10 +131,10 @@ private:
     InstanceListBase* next;
 
     //ban dynamic allocation
-    void* operator new(size_t);          // standard new
-    void* operator new(size_t, void*);   // placement new
-    void* operator new[](size_t);        // array new
-    void* operator new[](size_t, void*); // placement array new
+    void* operator new(std::size_t);          // standard new
+    void* operator new(std::size_t, void*);   // placement new
+    void* operator new[](std::size_t);        // array new
+    void* operator new[](std::size_t, void*); // placement array new
 };
 
 template<class T>
@@ -150,6 +151,30 @@ protected:
 private:
     friend void Run();
 };
+
+///Base class to be executed while running tests
+class SimpleRunner: public Runnable{
+protected:
+    //
+    virtual void DoTest() = 0;
+
+    ///Method to be runned for all found Runnable instances
+    virtual void Run(){
+        try{
+            DoTest();
+        }
+        catch(const TestCaseFailed&){
+        }
+        catch(const std::exception& e){
+        }
+        catch(...){
+        }
+    }
+
+private:
+    friend void Run();
+};
+
 
 inline void Run(){
     InstanceListBase<Runnable>::ForEachInstance(
