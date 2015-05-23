@@ -60,6 +60,7 @@ Every variable declared in Setup code is visible from Teardown code.
 
 #include <cstddef>
 #include <stdexcept>
+#include <string>
 
 ///helper macro to concatenate expanded macro arguments
 #define IU_CAT_ID_EXPANDED_HELPER(a,b) a##b
@@ -102,12 +103,27 @@ namespace InstantUnit{
 ///Execute all known Test Suites
 void Run();
 
+class Reporter{
+public:
+    ///Called when test case is pased
+    virtual void OnTestPassed(const std::string& testName) = 0;
+    ///Called when test case is failed
+    virtual void OnTestFailled(const std::string& testName) = 0;
 
+    ///Uncaught exception (derived from std::exception) is detected
+    virtual void OnUncaughtException(
+        const std::string& testName,
+        const std::exception& e
+    ) = 0;
+    ///Uncaught exception (not derived from std::exception) is detected
+    virtual void OnUnknownUncaughtException(const std::string& testName) = 0;
+};
 
 
 /*=============================================================================
 *  Implementation details
 *=============================================================================*/
+
 namespace details{
     ///Exception to be used to signal that test case failed
     class TestCaseFailed{};
