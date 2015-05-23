@@ -4,6 +4,7 @@
 
 IU_TEST("Test 1")
 {
+    //UI_ASSERT("");
     std::cout << "InstantUnit 111" << std::endl;
 }
 
