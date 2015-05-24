@@ -4,32 +4,55 @@
 Simple usage sample (single test, all in one):
 @code
 
-    IU_TEST("My test name"){
-        //Optional setup statements
-        ...
-        //Checks and asserts (those like IU_CHECK, IU_IS_EQUAL, UI_IS_CLOSE, etc)
-        ...
-        //Optional teardown (cleanup)
-        ...
-        //Note: it is responsibility of the developer to ensure
-        //      correct teardown in case of exception!
+    TEST("My test name"){
+        //Setup statements
+        std::vector<int> v;
+        v.push_back(10);
+        v.push_back(20);
+        v.push_back(31);
+
+        //Asserts or expectations
+        ASSERTION(v.empty()) == false;
+        ASSERTION(v.size) == 3;
+        EXPECTATION(v.front()) == 10;
+        EXPECTATION(v.back()) == 31
     }
 
 @endcode
+Note: if condition fails then corresponding ASSERTION causes test to complete
+      immediately, the rest of the failed test is skipped.
+      In contrast conditions marked with EXPECTATION just mark surrounding test
+      case as failed, but execution continues.
+
+You can write condition to be checked directly inside of ASSERTION
+or EXPECTATION macro:
+@code
+    EXPECTATION(x > 3);
+    EXPECTATION(y >= 2.9 && y <= 3.1);
+@endcode
+but when condition fails there will be no additional information why.
+Use following syntax:
+@code
+    EXPECTATION(x) > 3;
+    EXPECTATION(y, CloseTo, 3, 0.1);
+@endcode
+Now value of x will go tho the output, and
+
+EXPECTATION(v.back(), IsPrime)
 
 More complex sample (Add common setup and teardown, notice how those
 setup and teardown are located - there is no need to inherit from any
 classes, override any functions, etc):
 @code
 
-    IU_TEST_SUITE("My Suite name"){ // ... __LINE__##_Run(NU::TestCaseRunner& NU_TestCaseRunner) {
+    TEST_SUITE("My Suite name"){ // ... __LINE__##_Run(NU::TestCaseRunner& NU_TestCaseRunner) {
         //optional setup code to be executed before every test case
         ... //declare variables, setup environment, etc
 
-        IU_TEST_CASE("My TC 1"){ //NU_TestCaseRunner(__FILE__, __LINE__, "TC 1") ->* [&]() {
+        TEST_CASE("My TC 1"){ //NU_TestCaseRunner(__FILE__, __LINE__, "TC 1") ->* [&]() {
            ... //Checks and asserts (IU_CHECK, IU_IS_EQUAL, UI_IS_CLOSE etc)
         };
-        IU_TEST_CASE("My TC 2"){ //NU_TestCaseRunner(__FILE__, __LINE__, "TC 2") ->* [&]() {
+        TEST_CASE("My TC 2"){ //NU_TestCaseRunner(__FILE__, __LINE__, "TC 2") ->* [&]() {
            ... //Checks and asserts (IU_CHECK, IU_IS_EQUAL, UI_IS_CLOSE, etc)
         };
         ...//etc
@@ -62,15 +85,22 @@ Every variable declared in Setup code is visible from Teardown code.
 #include <stdexcept>
 #include <string>
 
-///helper macro to concatenate expanded macro arguments
-#define IU_CAT_ID_EXPANDED_HELPER(a,b) a##b
-///Expand and concatenate macro arguments
+///Expand and concatenate macro arguments into combined identifier
 #define IU_CAT_ID(a,b) IU_CAT_ID_EXPANDED_HELPER(a,b)
+//helper macro to concatenate expanded macro arguments
+#define IU_CAT_ID_EXPANDED_HELPER(a,b) a##b
 
+///
+#define IU_HAS_MANY_ARGUMENTS(...) \
+      IU_HAS_MANY_ARGUMENTS_EXPAND_HELPER(__VA_ARGS__, true, true, true, true, true, true, true, true, true, true, false)
+//helper macro to expand arguments
+#define IU_HAS_MANY_ARGUMENTS_EXPAND_HELPER(...) IU_HAS_MANY_ARGUMENTS_EXPANDED_HELPER(__VA_ARGS__)
+//helper macro (used by IU_HAS_MANY_ARGUMENTS to obtain shifted argument)
+#define IU_HAS_MANY_ARGUMENTS_EXPANDED_HELPER(     _1,   _2,   _3,   _4    _5,   _6,   _7,   _8,   _9,  _10,  _11,   res) res
 
 ///Simple test
 /** Place test code in braces after IU_TEST */
-#define IU_TEST(testNameString) \
+#define TEST(testNameString) \
     class IU_CAT_ID(Test_,__LINE__): private InstantUnit::details::SimpleRunner{ \
         virtual void DoTest(); \
     }; \
@@ -80,14 +110,18 @@ Every variable declared in Setup code is visible from Teardown code.
 ///Group test cases together to support common setup/teardown
 /**Place test setup, then test cases and then teardown.
    See example above on how to use this stuff.*/
-#define IU_TEST_SUITE(testSuiteNameString) \
+#define TEST_SUITE(testSuiteNameString) \
     class testSuiteNameString##_TestSuite:
 
 ///Single test case item in test duite (share setup/teardown) with others
-#define IU_TEST_CASE(testCaseNameString)
+#define TEST_CASE(testCaseNameString)
 
 
+///Mark variable or entire expression as being subject to ""
+#define ASSERTION()
 
+#define EXPECTATION
+/*
 #define IU_CHECK(textExplain, conditionToCheck)
 
 #define IU_IS_EQUAL(expectedValue, actualValue)
@@ -95,6 +129,7 @@ Every variable declared in Setup code is visible from Teardown code.
 #define UI_IS_CLOSE
 
 #define UI_CHECK_THROWS
+*/
 //TODO
 
 
@@ -102,6 +137,15 @@ namespace InstantUnit{
 
 ///Execute all known Test Suites
 void Run();
+
+///Target variable or expression being currently tested
+class Target{
+public:
+    ///Text representation
+    std::string Text() const {}
+private:
+    std::string text;
+};
 
 class Reporter{
 public:
