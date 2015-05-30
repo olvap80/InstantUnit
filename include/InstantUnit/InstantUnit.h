@@ -82,21 +82,10 @@ Every variable declared in Setup code is visible from Teardown code.
 #define INSTANTUNIT_HDR_
 
 #include <cstddef>
+#include <cmath>
 #include <stdexcept>
 #include <string>
 
-///Expand and concatenate macro arguments into combined identifier
-#define IU_CAT_ID(a,b) IU_CAT_ID_EXPANDED_HELPER(a,b)
-//helper macro to concatenate expanded macro arguments
-#define IU_CAT_ID_EXPANDED_HELPER(a,b) a##b
-
-///
-#define IU_HAS_MANY_ARGUMENTS(...) \
-      IU_HAS_MANY_ARGUMENTS_EXPAND_HELPER(__VA_ARGS__, true, true, true, true, true, true, true, true, true, true, false)
-//helper macro to expand arguments
-#define IU_HAS_MANY_ARGUMENTS_EXPAND_HELPER(...) IU_HAS_MANY_ARGUMENTS_EXPANDED_HELPER(__VA_ARGS__)
-//helper macro (used by IU_HAS_MANY_ARGUMENTS to obtain shifted argument)
-#define IU_HAS_MANY_ARGUMENTS_EXPANDED_HELPER(     _1,   _2,   _3,   _4    _5,   _6,   _7,   _8,   _9,  _10,  _11,   res) res
 
 ///Simple test
 /** Place test code in braces after IU_TEST */
@@ -118,19 +107,31 @@ Every variable declared in Setup code is visible from Teardown code.
 
 
 ///Mark variable or entire expression as being subject to ""
-#define ASSERTION()
+#define ASSERT()
 
-#define EXPECTATION
-/*
-#define IU_CHECK(textExplain, conditionToCheck)
+#define EXPECT()
 
-#define IU_IS_EQUAL(expectedValue, actualValue)
 
-#define UI_IS_CLOSE
+//Expand and concatenate macro arguments into combined identifier
+#define IU_CAT_ID(a,b) IU_CAT_ID_EXPANDED_HELPER(a,b)
+//helper macro to concatenate expanded macro arguments
+#define IU_CAT_ID_EXPANDED_HELPER(a,b) a##b
 
-#define UI_CHECK_THROWS
-*/
+//helper macro to determine if we assert value or function call
+#define IU_GET_SUFFIX_FROM_NUM_ARG(...) \
+    IU_GET_SUFFIX_FROM_NUM_ARG_HELPER(__VA_ARGS__, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, VAL)
+//helper macro (used by IU_HAS_MANY_ARGUMENTS to obtain shifted argument)
+#define IU_GET_SUFFIX_FROM_NUM_ARG_HELPER(     _1,   _2,   _3,   _4,   _5,   _6,   _7,   _8,   _9,  _10,  _11,  _12,  _13,  _14,  _15,  _16, res) res
+
 //TODO
+inline bool IsClose(double val1, double val2, double precission){
+    return std::fabs(val1 - val2) <= precission;
+}
+template<class T>
+inline bool IsBetween(T val, T fromInclusive, T toInclusive){
+    return false;
+}
+
 
 
 namespace InstantUnit{
