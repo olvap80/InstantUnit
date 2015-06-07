@@ -12,16 +12,16 @@ Simple usage sample (single test, all in one):
         v.push_back(31);
 
         //Asserts or expectations
-        ASSERTION(v.empty()) == false;
-        ASSERTION(v.size) == 3;
-        EXPECTATION(v.front()) == 10;
-        EXPECTATION(v.back()) == 31
+        ASSERT(v.empty()) == false;
+        ASSERT(v.size()) == 3;
+        EXPECT(v.front()) == 10;
+        EXPECT(v.back()) == 31
     }
 
 @endcode
-Note: if condition fails then corresponding ASSERTION causes test to complete
-      immediately, the rest of the failed test is skipped.
-      In contrast conditions marked with EXPECTATION just mark surrounding test
+Note: ASSERT causes test to complete immediately if condition fails,
+      the rest of the failed test is skipped.
+      In contrast conditions marked with EXPECT just mark surrounding test
       case as failed, but execution continues.
 
 You can write condition to be checked directly inside of ASSERTION
@@ -30,15 +30,28 @@ or EXPECTATION macro:
     EXPECTATION(x > 3);
     EXPECTATION(y >= 2.9 && y <= 3.1);
 @endcode
-but when condition fails there will be no additional information why.
+but when condition fails there will be no additional information "why failed".
 Use following syntax:
 @code
     EXPECTATION(x) > 3;
-    EXPECTATION(y, CloseTo, 3, 0.1);
+    EXPECTATION(InstantUnit::IsClose, y, 3, 0.1);
 @endcode
-Now value of x will go tho the output, and
+Now value of x will go tho the output, and arguments passed to predicate
+are printed. InstantUnit::IsClose is a predicate built into the framework,
+but you can write your own:
 
-EXPECTATION(v.back(), IsPrime)
+@code
+    bool IsOdd(int v){
+        return v & 0x1
+    }
+    TEST("Test OddGenerator"){
+        OddGenerator g;
+
+        ASSERT(IsOdd, g.GetNext());
+        ASSERT(IsOdd, g.GetNext());
+        ASSERT(IsOdd, g.GetNext());
+    }
+@endcode
 
 More complex sample (Add common setup and teardown, notice how those
 setup and teardown are located - there is no need to inherit from any
@@ -85,6 +98,7 @@ Every variable declared in Setup code is visible from Teardown code.
 #include <cmath>
 #include <stdexcept>
 #include <string>
+#include <functional>
 
 
 ///Simple test
@@ -93,7 +107,7 @@ Every variable declared in Setup code is visible from Teardown code.
     class IU_CAT_ID(Test_,__LINE__): private InstantUnit::details::SimpleRunner{ \
         virtual void DoTest(); \
     }; \
-    IU_CAT_ID(Test_,__LINE__) IU_CAT_ID(Instance_,__LINE__); \
+    static IU_CAT_ID(Test_,__LINE__) IU_CAT_ID(Instance_,__LINE__); \
     void IU_CAT_ID(Test_,__LINE__)::DoTest()
 
 ///Group test cases together to support common setup/teardown
@@ -106,50 +120,55 @@ Every variable declared in Setup code is visible from Teardown code.
 #define TEST_CASE(testCaseNameString)
 
 
-///Mark variable or entire expression as being subject to ""
+///Mark value or entire expression as being subject to "assert test"
 #define ASSERT()
 
 #define EXPECT()
-
-
-//Expand and concatenate macro arguments into combined identifier
-#define IU_CAT_ID(a,b) IU_CAT_ID_EXPANDED_HELPER(a,b)
-//helper macro to concatenate expanded macro arguments
-#define IU_CAT_ID_EXPANDED_HELPER(a,b) a##b
-
-//helper macro to determine if we assert value or function call
-#define IU_GET_SUFFIX_FROM_NUM_ARG(...) \
-    IU_GET_SUFFIX_FROM_NUM_ARG_HELPER(__VA_ARGS__, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, VAL)
-//helper macro (used by IU_HAS_MANY_ARGUMENTS to obtain shifted argument)
-#define IU_GET_SUFFIX_FROM_NUM_ARG_HELPER(     _1,   _2,   _3,   _4,   _5,   _6,   _7,   _8,   _9,  _10,  _11,  _12,  _13,  _14,  _15,  _16, res) res
-
-//TODO
-inline bool IsClose(double val1, double val2, double precission){
-    return std::fabs(val1 - val2) <= precission;
-}
-template<class T>
-inline bool IsBetween(T val, T fromInclusive, T toInclusive){
-    return false;
-}
 
 
 
 namespace InstantUnit{
 
 ///Execute all known Test Suites
-void Run();
+void RunTests();
+
+///
+inline bool IsClose(double val1, double val2, double precission){
+    return std::fabs(val1 - val2) <= precission;
+}
+
+///
+template<class T>
+inline bool IsBetween(T val, T fromInclusive, T toInclusive){
+    return false;
+}
 
 ///Target variable or expression being currently tested
 class Target{
 public:
     ///Text representation
-    std::string Text() const {}
+    std::string Text() const {} //TODO:
 private:
     std::string text;
 };
 
 class Reporter{
 public:
+    ///Called before test step is being executed
+    virtual void OnTestStep(const std::string& testName, const std::string& stepText) = 0;
+
+    ///Called to place message to output stream
+    virtual void Message(const std::string& textMessage) = 0;
+
+    ///Called when need to output expected and actual value
+    virtual void OnExpectedAndActual(const std::string& expectedValue, const std::string& actualValue) = 0;
+
+    ///Called when single test step failed
+    virtual void OnStepPassed() = 0;
+    ///Called when single test step failed
+    virtual void OnStepFailed() = 0;
+
+
     ///Called when test case is pased
     virtual void OnTestPassed(const std::string& testName) = 0;
     ///Called when test case is failed
@@ -164,16 +183,51 @@ public:
     virtual void OnUnknownUncaughtException(const std::string& testName) = 0;
 };
 
+}
 
 /*=============================================================================
 *  Implementation details
 *=============================================================================*/
 
+//Expand and concatenate macro arguments into combined identifier
+#define IU_CAT_ID(a,b) IU_CAT_ID_EXPANDED_HELPER(a,b)
+//helper macro to concatenate expanded macro arguments
+#define IU_CAT_ID_EXPANDED_HELPER(a,b) a##b
+
+//helper macro to determine if we assert value or function call
+#define IU_GET_SUFFIX_FROM_NUM_ARG(...) \
+    IU_GET_SUFFIX_FROM_NUM_ARG_HELPER(__VA_ARGS__, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, VAL)
+//helper macro (used by IU_HAS_MANY_ARGUMENTS to obtain shifted argument)
+#define IU_GET_SUFFIX_FROM_NUM_ARG_HELPER(     _1,   _2,   _3,   _4,   _5,   _6,   _7,   _8,   _9,  _10,  _11,  _12,  _13,  _14,  _15,  _16, res) res
+
+namespace InstantUnit{
+
 namespace details{
     ///Exception to be used to signal that test case failed
     class TestCaseFailed{};
 
-    //Implementation details
+    ///
+    class Context{
+    public:
+        //void Step
+    };
+
+    template<class T>
+    struct ValueWrap{
+        ValueWrap(const T& val):value(val){}
+        const T& value;
+
+        template<class T2>
+        std::function<void(Context&)> operator<(const T2& compareWith) const{
+            return [&] (Context&){
+                //TODO: report actual and expected
+                if( value < compareWith ){
+                    //TODO: report how passed
+                }
+                //TODO: report why failed
+            };
+        }
+    };
 
     ///Helper to create list of static/global object instances
     /**Every derived instance will be a part of the global list.
@@ -228,7 +282,7 @@ namespace details{
         virtual void Run() = 0;
 
     private:
-        friend void InstantUnit::Run();
+        friend void InstantUnit::RunTests();
     };
 
     ///Base class to be executed while running tests
@@ -255,16 +309,15 @@ namespace details{
 
         friend void Run();
     };
-}
+} //namespace InstantUnit::details
 
-inline void Run(){
+inline void RunTests(){
     details::InstanceListBase<details::Runnable>::ForEachInstance(
         [](details::Runnable* ptr){
             ptr->Run();
         }
     );
 }
-
 
 } //namespace InstantUnit
 
