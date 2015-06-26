@@ -132,12 +132,12 @@ namespace InstantUnit{
 ///Execute all known Test Suites
 void RunTests();
 
-///
+///Test double values are equal with precission
 inline bool IsClose(double val1, double val2, double precission){
     return std::fabs(val1 - val2) <= precission;
 }
 
-///
+///Test value is within limits (fromInclusive <= val <= toInclusive)
 template<class T>
 inline bool IsBetween(T val, T fromInclusive, T toInclusive){
     return false;
