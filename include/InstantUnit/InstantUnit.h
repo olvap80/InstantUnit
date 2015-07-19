@@ -1,43 +1,44 @@
 /** @file InstantUnit.h
     @brief Mimimalistic (header only) Unit Test framework for C++11 and above.
 
-Simple usage sample (single test, all in one):
+Simple usage sample (single Test Case, without shared Setup/Teardown, all in one):
 @code
 
     TEST("My test name"){
-        //Setup statements
+        //Setup statements (local, not shared)
         std::vector<int> v;
         v.push_back(10);
         v.push_back(20);
         v.push_back(31);
 
-        //Asserts or expectations
+        //Asserts will end current Test Case when failed
         ASSERT(v.empty()) == false;
         ASSERT(v.size()) == 3;
+        //Expects will still continue Test after failed
         EXPECT(v.front()) == 10;
         EXPECT(v.back()) == 31
     }
 
 @endcode
-Note: ASSERT causes test to complete immediately if condition fails,
-      the rest of the failed test is skipped.
-      In contrast conditions marked with EXPECT just mark surrounding test
-      case as failed, but execution continues.
+Note: ASSERT causes Test to complete immediately when corresponding
+             condition fails, the rest of the failed Test is skipped.
+      EXPECT (in contrast) just mark surrounding Test Case as failed,
+             but Test Case execution continues.
 
-You can write condition to be checked directly inside of ASSERTION
-or EXPECTATION macro:
+You can write a condition to be checked directly inside of the ASSERT
+or EXPECT macro:
 @code
-    EXPECTATION(x > 3);
-    EXPECTATION(y >= 2.9 && y <= 3.1);
+    EXPECT(x > 3);
+    EXPECT(y >= 2.9 && y <= 3.1);
 @endcode
 but when condition fails there will be no additional information "why failed".
 Use following syntax:
 @code
-    EXPECTATION(x) > 3;
-    EXPECTATION(InstantUnit::IsClose, y, 3, 0.1);
+    EXPECT(x) > 3;
+    EXPECT(InstantUnit::IsClose, y, 3, 0.1);
 @endcode
 Now value of x will go tho the output, and arguments passed to predicate
-are printed. InstantUnit::IsClose is a predicate built into the framework,
+are printed. InstantUnit::IsClose, from sample above, is a predicate built into the framework,
 but you can write your own:
 
 @code
@@ -53,13 +54,13 @@ but you can write your own:
     }
 @endcode
 
-More complex sample (Add common setup and teardown, notice how those
-setup and teardown are located - there is no need to inherit from any
+More complex sample (Add shared common Setup and Teardown, notice how those
+Setup and Teardown are located - there is no need to inherit from any
 classes, override any functions, etc):
 @code
 
     TEST_SUITE("My Suite name"){ // ... __LINE__##_Run(NU::TestCaseRunner& NU_TestCaseRunner) {
-        //optional setup code to be executed before every test case
+        //optional Setup code to be executed before every Test Case in the Suite
         ... //declare variables, setup environment, etc
 
         TEST_CASE("My TC 1"){ //NU_TestCaseRunner(__FILE__, __LINE__, "TC 1") ->* [&]() {
@@ -70,24 +71,24 @@ classes, override any functions, etc):
         };
         ...//etc
 
-        //optional teardown code to be executed after every test case
+        //optional Teardown code to be executed after every Test Case
         ... //optionally cleanup the environment, if needed
         //Note: (teardown is automatically executed even in case of exception!)
     }
 
 @endcode
 
-Here test suite is not only a collection of test cases but also a way
-to surround every test case in the collection with setup and teardown code.
+Here Test Suite is not only a collection of Test Cases but also a way
+to surround every Test Case in that collection with the Setup and Teardown code.
 
-Setup code from the test suite is executed before each test case like it was
-pasted directly before the test case body. You can declare variables in setup
-and they will be visible from the test case body.
+Setup code from the Test Suite is executed before each Test Case like it was
+pasted directly before the Test Case body. You can declare variables in Setup
+and they will be visible from the Test Case body.
 
-Teardown code from the test suite is executed after each test case like it is
+Teardown code from the Test Suite is executed after each Test Case like it is
 pasted directly after the test case body. Teardown code is still automatically
-executed even in case of exception in a test case body.
-Every variable declared in Setup code is visible from Teardown code.
+executed even in case of exception in a Test Case body.
+Every variable declared in the Setup code is visible from the Teardown code.
 
 */
 
@@ -101,36 +102,48 @@ Every variable declared in Setup code is visible from Teardown code.
 #include <functional>
 
 
-///Simple test
-/** Place test code in braces after IU_TEST */
+///Simple Test (standalone Test Case without shared Setup/Teardown stuff)
+/** Place Test code in braces after TEST macro*/
 #define TEST(testNameString) \
+    /*Class to run test code in*/ \
     class IU_CAT_ID(Test_,__LINE__): private InstantUnit::details::SimpleRunner{ \
+        /*Test code will go here, called automatically from SimpleRunner*/ \
         virtual void DoTest(); \
     }; \
+    /*Corresponding static instance to be part of run*/ \
     static IU_CAT_ID(Test_,__LINE__) IU_CAT_ID(Instance_,__LINE__); \
+    /*Test body will follow below*/ \
     void IU_CAT_ID(Test_,__LINE__)::DoTest()
 
-///Group test cases together to support common setup/teardown
-/**Place test setup, then test cases and then teardown.
+///Group Test Cases together to support common Setup/Teardown
+/**Place Test Setup, then Test Cases and then Teardown.
    See example above on how to use this stuff.*/
 #define TEST_SUITE(testSuiteNameString) \
     class testSuiteNameString##_TestSuite:
 
-///Single test case item in test duite (share setup/teardown) with others
+///Single Test Case item in the Test Suite (share Setup/Teardown with others)
 #define TEST_CASE(testCaseNameString)
 
 
 ///Mark value or entire expression as being subject to "assert test"
+/**Causes Test Case to complete immediately on "verify fail"
+   (when corresponding condition fails),
+   the rest of the failed test is skipped.*/
 #define ASSERT()
 
+///Mark value or entire expression as being subject to "expect test"
+/**Just mark surrounding Test Case as failed on "verify fail",
+   but Test Case execution continues.*/
 #define EXPECT()
 
 
 
 namespace InstantUnit{
 
-///Execute all known Test Suites
+///Execute all known Test Suites with default test runner
 void RunTests();
+
+//Predefined verifiers --------------------------------------------------------
 
 ///Test double values are equal with precission
 inline bool IsClose(double val1, double val2, double precission){
@@ -143,15 +156,47 @@ inline bool IsBetween(T val, T fromInclusive, T toInclusive){
     return false;
 }
 
-///Target variable or expression being currently tested
-class Target{
+
+///All test in the process are executed in the context of Test Session
+class ContextForTestSession{
 public:
-    ///Text representation
-    std::string Text() const {} //TODO:
-private:
-    std::string text;
+    ///
+    virtual std::string TestSessionName() const = 0;
 };
 
+
+///
+class ContextForTestSuite{
+public:
+    ///
+    virtual std::string TestSuiteName() const = 0;
+};
+
+///
+class ContextForTestCase{
+public:
+    ///Access entire testing context (whole test or test case)
+    virtual const ContextForTestSuite& TestSuite() const = 0;
+
+    ///Name used in corresponding TEST or TEST_CASE macro
+    virtual std::string TestCaseName() const = 0;
+
+};
+
+///Target variable or expression being currently verified
+class ContextForVerifyStatement{
+public:
+    ///Access entire testing context (whole test or test case)
+    virtual const ContextForTestCase& TestCase() const = 0;
+
+    ///Text representation of entire expression to be verified
+    virtual std::string ExpresionText() const = 0;
+};
+
+
+//Progress reporting ----------------------------------------------------------
+
+///Report tests execution progress
 class Reporter{
 public:
     ///Called before test step is being executed
