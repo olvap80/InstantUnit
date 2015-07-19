@@ -140,7 +140,7 @@ Every variable declared in the Setup code is visible from the Teardown code.
 
 namespace InstantUnit{
 
-///Execute all known Test Suites with default test runner
+///Execute all known Test Suites as part of default Test Session
 void RunTests();
 
 //Predefined verifiers --------------------------------------------------------
@@ -157,7 +157,7 @@ inline bool IsBetween(T val, T fromInclusive, T toInclusive){
 }
 
 
-///All test in the process are executed in the context of Test Session
+///All Tests in the process are executed in the context of Test Session
 class ContextForTestSession{
 public:
     ///
@@ -165,7 +165,7 @@ public:
 };
 
 
-///
+///Test Suite is a container for Test Cases with shared Setup/Teardown
 class ContextForTestSuite{
 public:
     ///
