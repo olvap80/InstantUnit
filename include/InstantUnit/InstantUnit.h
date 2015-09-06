@@ -125,13 +125,26 @@ Every variable declared in the Setup code is visible from the Teardown code.
 #define TEST_CASE(testCaseNameString)
 
 
-///Mark value or entire expression as being subject to "assert test"
+///Mark an expression or call as being subject to "assert test"
 /**Causes Test Case to complete immediately on "verify fail"
    (when corresponding condition fails),
-   the rest of the failed test is skipped.*/
+   the rest of the failed test is skipped.
+   Following usages are possible:
+   @code
+       ASSERT(expression);                       //verify expression is not 0
+       ASSERT(expression) == valueToCompareWith; //verify expression == valueToCompareWith
+       ASSERT(expression) != valueToCompareWith; //verify expression != valueToCompareWith
+       ASSERT(expression) < valueToCompareWith;  //verify expression < valueToCompareWith
+       ASSERT(expression) <= valueToCompareWith; //verify expression <= valueToCompareWith
+       ASSERT(expression) > valueToCompareWith;  //verify expression > valueToCompareWith
+       ASSERT(expression) > valueToCompareWith;  //verify expression > valueToCompareWith
+   @endcode
+   Note: only comparison operations are allowed
+         and ASSERT(expression) always goes first.
+   */
 #define ASSERT()
 
-///Mark value or entire expression as being subject to "expect test"
+///Mark an expression or call as being subject to "expect test"
 /**Just mark surrounding Test Case as failed on "verify fail",
    but Test Case execution continues.*/
 #define EXPECT()
@@ -162,6 +175,19 @@ class ContextForTestSession{
 public:
     ///
     virtual std::string TestSessionName() const = 0;
+
+    //test session start date
+    //test session end date
+
+    //number of all test suites found
+    //total number of all test cases in all test suites
+
+    //total number or test cases passed
+    //total number or test cases failed
+
+    //Total execution time of all suites
+
+    //collection of test suites?
 };
 
 
@@ -170,6 +196,8 @@ class ContextForTestSuite{
 public:
     ///
     virtual std::string TestSuiteName() const = 0;
+
+    //number of all test cases in this test suite
 };
 
 ///
