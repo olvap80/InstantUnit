@@ -134,19 +134,21 @@ Every variable declared in the Setup code is visible from the Teardown code.
        ASSERT(expression);                       //verify expression is not 0
        ASSERT(expression) == valueToCompareWith; //verify expression == valueToCompareWith
        ASSERT(expression) != valueToCompareWith; //verify expression != valueToCompareWith
-       ASSERT(expression) < valueToCompareWith;  //verify expression < valueToCompareWith
+       ASSERT(expression) <  valueToCompareWith; //verify expression <  valueToCompareWith
        ASSERT(expression) <= valueToCompareWith; //verify expression <= valueToCompareWith
-       ASSERT(expression) > valueToCompareWith;  //verify expression > valueToCompareWith
-       ASSERT(expression) > valueToCompareWith;  //verify expression > valueToCompareWith
+       ASSERT(expression) >  valueToCompareWith; //verify expression >  valueToCompareWith
+       ASSERT(expression) >= valueToCompareWith; //verify expression)>= valueToCompareWith
    @endcode
-   Note: only comparison operations are allowed
-         and ASSERT(expression) always goes first.
+   Note1: only comparison operations are allowed
+          and ASSERT(expression) always goes first.
+
    */
 #define ASSERT()
 
 ///Mark an expression or call as being subject to "expect test"
 /**Just mark surrounding Test Case as failed on "verify fail",
-   but Test Case execution continues.*/
+   but Test Case execution continues.
+   Usage is similar to ASSERT from above */
 #define EXPECT()
 
 
