@@ -144,13 +144,14 @@ Every variable declared in the Setup code is visible from the Teardown code.
 
    */
 #define ASSERT()
+//
 
 ///Mark an expression or call as being subject to "expect test"
 /**Just mark surrounding Test Case as failed on "verify fail",
    but Test Case execution continues.
    Usage is similar to ASSERT from above */
 #define EXPECT()
-
+//
 
 
 namespace InstantUnit{
@@ -171,14 +172,21 @@ inline bool IsBetween(T val, T fromInclusive, T toInclusive){
     return false;
 }
 
+//Contexts for reporting ------------------------------------------------------
 
 ///All Tests in the process are executed in the context of Test Session
-class ContextForTestSession{
+class ContextBeforeTestSession{
 public:
     ///
     virtual std::string TestSessionName() const = 0;
 
     //test session start date
+
+};
+
+///All Tests in the process are executed in the context of Test Session
+class ContextAfterTestSession: public ContextBeforeTestSession{
+public:
     //test session end date
 
     //number of all test suites found
@@ -192,35 +200,63 @@ public:
     //collection of test suites?
 };
 
-
 ///Test Suite is a container for Test Cases with shared Setup/Teardown
-class ContextForTestSuite{
+class ContextBeforeTestSuite{
 public:
     ///
     virtual std::string TestSuiteName() const = 0;
 
+};
+
+///Test Suite is a container for Test Cases with shared Setup/Teardown
+class ContextAfterTestSuite: public ContextBeforeTestSuite{
+public:
+
     //number of all test cases in this test suite
+    //number of all test cases passed in this test suite
+    //number of all test cases failed in this test suite
 };
 
 ///
 class ContextForTestCase{
 public:
-    ///Access entire testing context (whole test or test case)
-    virtual const ContextForTestSuite& TestSuite() const = 0;
+    ///Access to containing Test Suite
+    virtual const ContextBeforeTestSuite& TestSuite() const = 0;
 
     ///Name used in corresponding TEST or TEST_CASE macro
     virtual std::string TestCaseName() const = 0;
 
 };
 
-///Target variable or expression being currently verified
-class ContextForVerifyStatement{
+///
+class ContextForStatement{
 public:
     ///Access entire testing context (whole test or test case)
     virtual const ContextForTestCase& TestCase() const = 0;
+};
+
+///
+class ContextForStep: public ContextForStatement{
+public:
+    ///
+    virtual std::string StepText() const = 0;
+};
+
+
+///Target variable or expression being currently verified
+class ContextForVerify: public ContextForStatement{
+public:
+    ///
+    virtual bool IsPassed() const = 0;
 
     ///Text representation of entire expression to be verified
     virtual std::string ExpresionText() const = 0;
+
+    ///
+    virtual std::string ExpectedValue() const = 0;
+
+    ///
+    virtual std::string ActualValue() const = 0;
 };
 
 
@@ -230,18 +266,13 @@ public:
 class Reporter{
 public:
     ///Called before test step is being executed
-    virtual void OnTestStep(const std::string& testName, const std::string& stepText) = 0;
+    virtual void OnStep(const ContextForStep& contextForStep) = 0;
 
     ///Called to place message to output stream
-    virtual void Message(const std::string& textMessage) = 0;
-
-    ///Called when need to output expected and actual value
-    virtual void OnExpectedAndActual(const std::string& expectedValue, const std::string& actualValue) = 0;
+    virtual void Message(const std::string& textMessage) = 0; //TBD
 
     ///Called when single test step failed
-    virtual void OnStepPassed() = 0;
-    ///Called when single test step failed
-    virtual void OnStepFailed() = 0;
+    virtual void OnVerify(const ContextForVerify& contextForVerify) = 0;
 
 
     ///Called when test case is pased
