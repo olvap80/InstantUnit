@@ -5,7 +5,7 @@ Simple usage sample (single Test Case, without shared Setup/Teardown, all in one
 @code
 
     TEST("My test name"){
-        //Setup statements (local, not shared)
+        //Setup statements (local for this test, not shared with others)
         std::vector<int> v;
         v.push_back(10);
         v.push_back(20);
@@ -14,8 +14,10 @@ Simple usage sample (single Test Case, without shared Setup/Teardown, all in one
         //Asserts will end current Test Case when failed
         ASSERT(v.empty()) == false;
         ASSERT(v.size()) == 3;
+
         //Expects will still continue Test after failed
         EXPECT(v.front()) == 10;
+        EXPECT(v[1]) == 20;
         EXPECT(v.back()) == 31
     }
 
@@ -37,7 +39,7 @@ Use following syntax:
     EXPECT(x) > 3;
     EXPECT(InstantUnit::IsClose, y, 3, 0.1);
 @endcode
-Now value of x will go tho the output, and arguments passed to predicate
+Now value of x will go to the output, and arguments passed to predicate
 are printed. InstantUnit::IsClose, from sample above, is a predicate built into the framework,
 but you can write your own:
 
