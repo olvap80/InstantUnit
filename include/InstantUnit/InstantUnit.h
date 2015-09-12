@@ -2,8 +2,8 @@
     @brief Mimimalistic (header only) Unit Test framework for C++11 and above.
 
 Simple usage sample (single Test Case, without shared Setup/Teardown, all in one):
-@code
 
+@code
     TEST("My test name"){
         //Setup statements (local for this test, not shared with others)
         std::vector<int> v;
@@ -20,8 +20,8 @@ Simple usage sample (single Test Case, without shared Setup/Teardown, all in one
         EXPECT(v[1]) == 20;
         EXPECT(v.back()) == 31
     }
-
 @endcode
+
 Note: ASSERT causes Test to complete immediately when corresponding
              condition fails, the rest of the failed Test is skipped.
       EXPECT (in contrast) just mark surrounding Test Case as failed,
@@ -29,19 +29,24 @@ Note: ASSERT causes Test to complete immediately when corresponding
 
 You can write a condition to be checked directly inside of the ASSERT
 or EXPECT macro:
+
 @code
     EXPECT(x > 3);
     EXPECT(y >= 2.9 && y <= 3.1);
 @endcode
+
 but when condition fails there will be no additional information "why failed".
 Use following syntax:
+
 @code
-    EXPECT(x) > 3;
-    EXPECT(InstantUnit::IsClose, y, 3, 0.1);
+    EXPECT(x) > 3; //here InstantUnit is aware that we are comparing x with 3
+    EXPECT(InstantUnit::IsClose, y, 3, 0.1); //all parameters are traced now
 @endcode
+
 Now value of x will go to the output, and arguments passed to predicate
-are printed. InstantUnit::IsClose, from sample above, is a predicate built into the framework,
-but you can write your own:
+are printed.
+InstantUnit::IsClose, from sample above, is a predicate built
+into the framework, but you can write your own:
 
 @code
     bool IsOdd(int v){
@@ -59,6 +64,7 @@ but you can write your own:
 More complex sample (Add shared common Setup and Teardown, notice how those
 Setup and Teardown are located - there is no need to inherit from any
 classes, override any functions, etc):
+
 @code
 
     TEST_SUITE("My Suite name"){ // ... __LINE__##_Run(NU::TestCaseRunner& NU_TestCaseRunner) {
