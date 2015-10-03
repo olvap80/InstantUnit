@@ -40,7 +40,7 @@ Use following syntax:
 
 @code
     EXPECT(x) > 3; //here InstantUnit is aware that we are comparing x with 3
-    EXPECT(InstantUnit::IsClose, y, 3, 0.1); //all parameters are traced now
+    EXPECT(InstantUnit::IsClose, y, 3, 0.1); //all parameters are traceable now
 @endcode
 
 Now value of x will go to the output, and arguments passed to predicate
