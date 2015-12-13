@@ -190,46 +190,63 @@ public:
     virtual std::string TestSessionName() const = 0;
 
     ///test session start date
-    virtual std::chrono::system_clock::time_point TestSessionStartDate() const = 0;
+    virtual std::chrono::system_clock::time_point TestSessionStartTimePoint() const = 0;
 };
 
 ///All Tests in the process are executed in the context of Test Session
 class ContextAfterTestSession: public ContextBeforeTestSession{
 public:
     //test session end date
-    virtual std::chrono::system_clock::time_point TestSessionEndDate() const = 0;
+    virtual std::chrono::system_clock::time_point TestSessionEndTimePoint() const = 0;
 
-    //number of all test suites found
-    //total number of all test cases in all test suites
+    ///Number of all test suites found
+    virtual unsigned TestSuitesTotal() const = 0;
 
-    //total number or test cases passed
-    //total number or test cases failed
+    ///total number of all test cases in all test suites
+    virtual unsigned TestCasesTotal() const = 0;
 
-    //Total execution time of all suites
+    ///total number or test cases passed
+    virtual unsigned TestCasesPassed() const = 0;
 
-    //collection of test suites?
+    ///total number or test cases failed
+    virtual unsigned TestCasesFailed() const = 0;
+
+    ///Total execution time of all suites
+    virtual unsigned ExecutionTimeTotalSeconds() const = 0;
+
+    //collection of test suites ?
 };
 
 ///Test Suite is a container for Test Cases with shared Setup/Teardown
+/**Setup is executed before each test case.
+   Teardown is executed after each test case.*/
 class ContextBeforeTestSuite{
 public:
-    ///
-    /**Note: all TEST macro go to default test suite*/
+    ///Get name provided to corresponding TestSuite macro
+    /**Note: all TEST macro go to "default test suite"*/
     virtual std::string TestSuiteName() const = 0;
 
 };
 
 ///Test Suite is a container for Test Cases with shared Setup/Teardown
+/**Setup is executed before each test case.
+   Teardown is executed after each test case.*/
 class ContextAfterTestSuite: public ContextBeforeTestSuite{
 public:
 
-    //number of all test cases in this test suite
-    //number of all test cases passed in this test suite
-    //number of all test cases failed in this test suite
+    ///Number of all test cases in this test suite
+    virtual unsigned TestCasesTotal() const = 0;
+
+    ///Number of all test cases passed in this test suite
+    virtual unsigned TestCasesPassed() const = 0;
+
+    ///number of all test cases failed in this test suite
+    virtual unsigned TestCasesFailed() const = 0;
 };
 
-///
-class ContextForTestCase{
+///Test case is an item in the Test Suite with set of checks
+/***/
+class ContextBeforeTestCase{
 public:
     ///Access to containing Test Suite
     virtual const ContextBeforeTestSuite& TestSuite() const = 0;
@@ -243,7 +260,7 @@ public:
 class ContextForStatement{
 public:
     ///Access entire testing context (whole test or test case)
-    virtual const ContextForTestCase& TestCase() const = 0;
+    //virtual const ContextForTestCase& TestCase() const = 0;
 };
 
 ///
