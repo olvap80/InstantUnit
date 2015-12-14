@@ -11,11 +11,11 @@ Simple usage sample (single Test Case, without shared Setup/Teardown, all in one
         v.push_back(20);
         v.push_back(31);
 
-        //Asserts will end current Test Case when failed
+        //On failure asserts will end current Test Case
         ASSERT(v.empty()) == false;
         ASSERT(v.size()) == 3;
 
-        //Expects will still continue Test after failed
+        //Expects will still continue Test after failure
         EXPECT(v.front()) == 10;
         EXPECT(v[1]) == 20;
         EXPECT(v.back()) == 31
@@ -40,12 +40,12 @@ Use following syntax:
 
 @code
     EXPECT(x) > 3; //here InstantUnit is aware that we are comparing x with 3
-    EXPECT(InstantUnit::IsClose, y, 3, 0.1); //all parameters are traceable now
+    EXPECT_CALL(InstantUnit::IsClose, y, 3, 0.1); //all parameters are traced now
 @endcode
 
 Now value of x will go to the output, and arguments passed to predicate
 are printed.
-InstantUnit::IsClose, from sample above, is a predicate built
+InstantUnit::IsClose, from the sample above, is a predicate built
 into the framework, but you can write your own:
 
 @code
