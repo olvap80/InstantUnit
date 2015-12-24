@@ -12,7 +12,7 @@ Simple usage sample (single Test Case, without shared Setup/Teardown, all in one
         v.push_back(31);
 
         //On failure asserts will end current Test Case
-        ASSERT(v.empty()) == false;
+        ASSERT( !v.empty() );
         ASSERT(v.size()) == 3;
 
         //Expects will still continue Test after failure
@@ -39,8 +39,8 @@ but when condition fails there will be no additional information "why failed".
 Use following syntax:
 
 @code
+    EXPECT_CALL(InstantUnit::IsNear, y, 3, 0.1); //all parameters are traced now
     EXPECT(x) > 3; //here InstantUnit is aware that we are comparing x with 3
-    EXPECT_CALL(InstantUnit::IsClose, y, 3, 0.1); //all parameters are traced now
 @endcode
 
 Now value of x will go to the output, and arguments passed to predicate
@@ -171,7 +171,7 @@ void RunTests();
 //Predefined verifiers --------------------------------------------------------
 
 ///Test double values are equal with precission
-inline bool IsClose(double val1, double val2, double precission){
+inline bool IsNear(double val1, double val2, double precission){
     return std::fabs(val1 - val2) <= precission;
 }
 
