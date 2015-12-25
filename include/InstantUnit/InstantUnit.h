@@ -55,9 +55,9 @@ into the framework, but you can write your own:
     TEST("Test OddGenerator"){
         OddGenerator g;
 
-        ASSERT(IsOdd, g.GetNext());
-        ASSERT(IsOdd, g.GetNext());
-        ASSERT(IsOdd, g.GetNext());
+        ASSERT_CALL(IsOdd, g.GetNext());
+        ASSERT_CALL(IsOdd, g.GetNext());
+        ASSERT_CALL(IsOdd, g.GetNext());
     }
 @endcode
 
@@ -174,6 +174,8 @@ void RunTests();
 inline bool IsNear(double val1, double val2, double precission){
     return std::fabs(val1 - val2) <= precission;
 }
+
+//TODO: IsNear for complex numbers (and vectors via iterators? - euclidian distance)
 
 ///Test value is within limits (fromInclusive <= val <= toInclusive)
 template<class T>
@@ -329,10 +331,10 @@ public:
 #define IU_CAT_ID_EXPANDED_HELPER(a,b) a##b
 
 //helper macro to determine if we assert value or function call
-#define IU_GET_SUFFIX_FROM_NUM_ARG(...) \
-    IU_GET_SUFFIX_FROM_NUM_ARG_HELPER(__VA_ARGS__, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, CALL, VAL)
+#define IU_GET_ARG_COUNT(...) \
+    IU_GET_ARG_COUNT_HELPER(__VA_ARGS__, 16, 15, 14, 13, 12, 11, 10, 9,  8,  7,  6,  5,  4,  3,  2, 1)
 //helper macro (used by IU_HAS_MANY_ARGUMENTS to obtain shifted argument)
-#define IU_GET_SUFFIX_FROM_NUM_ARG_HELPER(     _1,   _2,   _3,   _4,   _5,   _6,   _7,   _8,   _9,  _10,  _11,  _12,  _13,  _14,  _15,  _16, res) res
+#define IU_GET_ARG_COUNT_HELPER(     _1, _2, _3, _4, _5, _6, _7, _8,_9,_10,_11,_12,_13,_14,_15,_16, res) res
 
 namespace InstantUnit{
 
