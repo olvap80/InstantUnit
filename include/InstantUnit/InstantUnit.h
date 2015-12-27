@@ -1,6 +1,9 @@
 /** @file InstantUnit.h
     @brief Mimimalistic (header only) Unit Test framework for C++11 and above.
 
+Disclaimer: all samples below are just for illustration and they are
+            not intended to demonstrate 100% coverage etc.
+
 Simple usage sample (single Test Case, without shared Setup/Teardown, all in one):
 
 @code
@@ -22,10 +25,12 @@ Simple usage sample (single Test Case, without shared Setup/Teardown, all in one
     }
 @endcode
 
-Note: ASSERT causes Test to complete immediately when corresponding
+Here
+      ASSERT causes Test to complete immediately when corresponding
              condition fails, the rest of the failed Test is skipped.
       EXPECT (in contrast) just mark surrounding Test Case as failed,
              but Test Case execution continues.
+
 
 You can write a condition to be checked directly inside of the ASSERT
 or EXPECT macro:
@@ -39,11 +44,11 @@ but when condition fails there will be no additional information "why failed".
 Use following syntax:
 
 @code
-    EXPECT_CALL(InstantUnit::IsNear, y, 3, 0.1); //all parameters are traced now
     EXPECT(x) > 3; //here InstantUnit is aware that we are comparing x with 3
+    EXPECT_CALL(InstantUnit::IsNear, y, 3, 0.1); //all parameters are traced now
 @endcode
 
-Now value of x will go to the output, and arguments passed to predicate
+Now value of x will go to the test output, and arguments passed to predicate
 are printed.
 InstantUnit::IsClose, from the sample above, is a predicate built
 into the framework, but you can write your own:
@@ -61,12 +66,12 @@ into the framework, but you can write your own:
     }
 @endcode
 
-More complex sample (Add shared common Setup and Teardown, notice how those
-Setup and Teardown are located - there is no need to inherit from any
-classes, override any functions, etc):
+More complex approach: add shared common Setup and Teardown. Please notice how
+those Setup and Teardown are located - there is no need to inherit from any
+classes, override any functions, etc
+    - just write your statements according to tamplate below:
 
 @code
-
     TEST_SUITE("My Suite name"){ // ... __LINE__##_Run(NU::TestCaseRunner& NU_TestCaseRunner) {
         //optional Setup code to be executed before every Test Case in the Suite
         ... //declare variables, setup environment, etc
@@ -83,7 +88,6 @@ classes, override any functions, etc):
         ... //optionally cleanup the environment, if needed
         //Note: (teardown is automatically executed even in case of exception!)
     }
-
 @endcode
 
 Here Test Suite is not only a collection of Test Cases but also a way
@@ -97,6 +101,41 @@ Teardown code from the Test Suite is executed after each Test Case like it is
 pasted directly after the test case body. Teardown code is still automatically
 executed even in case of exception in a Test Case body.
 Every variable declared in the Setup code is visible from the Teardown code.
+
+Practical sample:
+@code
+    TEST_SUITE("General std::vector teting"){
+        //Setup code to be executed before every Test Case in the Suite
+        std::vector<int> v;
+        v.push_back(10);
+        v.push_back(20);
+        v.push_back(31);
+        //Note: now v with three filled items will be visible to every TEST_CASE below
+
+
+        TEST_CASE("Test const operations"){
+            SANITY( !v.empty() );
+            SANITY(v.size()) == 3;
+
+            //Expects will still continue Test after failure
+            EXPECT(v.front()) == 10;
+            EXPECT(v[1]) == 20;
+            EXPECT(v.back()) == 31
+        }
+        TEST_CASE("Test clear method"){
+            SANITY( !v.empty() );
+            v.clear();
+            ASSERT( v.empty() );
+            ASSERT(v.size()) == 0;
+        }
+        TEST_CASE("Test pop_front"){
+            SANITY( !v.empty() );
+            SANITY(v.size()) > 3;
+            ...
+        }
+        //etc...
+    }
+@endcode
 
 */
 
@@ -117,9 +156,11 @@ Every variable declared in the Setup code is visible from the Teardown code.
     /*Class to run test code in*/ \
     class IU_CAT_ID(Test_,__LINE__): private InstantUnit::details::SimpleRunner{ \
         /*Test code will go here, called automatically from SimpleRunner*/ \
-        virtual void DoTest(); \
+        virtual void DoTest() override; \
+        \
+        virtual const char* TestName() override { return testNameString; }\
     }; \
-    /*Corresponding static instance to be part of run*/ \
+    /*Corresponding static (!) instance to be part of the run*/ \
     static IU_CAT_ID(Test_,__LINE__) IU_CAT_ID(Instance_,__LINE__); \
     /*Test body will follow below*/ \
     void IU_CAT_ID(Test_,__LINE__)::DoTest()
@@ -348,6 +389,7 @@ namespace details{
         //void Step
     };
 
+    ///Wrap value being tested
     template<class T>
     struct ValueWrap{
         ValueWrap(const T& val):value(val){}
@@ -427,11 +469,13 @@ namespace details{
         ///Method called to do actual testing
         virtual void DoTest() = 0;
 
+        ///Name for test being runned
+        virtual const char* TestName()  = 0;
+
     private:
         ///Method to be runned for all found Runnable instances
         virtual void Run(){
             try{
-
                 DoTest();
             }
             catch(const TestCaseFailed&){
