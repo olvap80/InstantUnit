@@ -31,6 +31,10 @@ Here
       EXPECT (in contrast) just mark surrounding Test Case as failed,
              but Test Case execution continues.
 
+Both ASSERT and EXPECT macro are intended to produce output
+and affect test execution statistics.
+
+There is also SANITY macro for "critical checks", see documentation below.
 
 You can write a condition to be checked directly inside of the ASSERT
 or EXPECT macro:
@@ -203,6 +207,11 @@ Practical sample:
 #define EXPECT()
 //
 
+///"Fatal" check macro for "critical condition checks".
+/*Never go to output for "passed" case and do not affect statistics.
+  Failed SANITY check means entire test session is broken and cannot continue.
+  Usage is similar to ASSERT and EXPECT from above */
+#define SANITY()
 
 namespace InstantUnit{
 
