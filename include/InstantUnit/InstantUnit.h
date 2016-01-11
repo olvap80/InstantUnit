@@ -243,6 +243,10 @@ public:
 
     ///test session start date
     virtual std::chrono::system_clock::time_point TestSessionStartTimePoint() const = 0;
+
+    ///Number of all test suites found in this test session
+    /** Available before actual execution*/
+    virtual unsigned TestSuitesTotal() const = 0;
 };
 
 ///All Tests in the process are executed in the context of Test Session
@@ -251,16 +255,13 @@ public:
     //test session end date
     virtual std::chrono::system_clock::time_point TestSessionEndTimePoint() const = 0;
 
-    ///Number of all test suites found
-    virtual unsigned TestSuitesTotal() const = 0;
-
-    ///total number of all test cases in all test suites
+    ///Total number of all test cases in all test suites
     virtual unsigned TestCasesTotal() const = 0;
 
-    ///total number or test cases passed
+    ///Total number or test cases passed
     virtual unsigned TestCasesPassed() const = 0;
 
-    ///total number or test cases failed
+    ///Total number or test cases failed
     virtual unsigned TestCasesFailed() const = 0;
 
     ///Total execution time of all suites
@@ -269,8 +270,9 @@ public:
     //collection of test suites ?
 };
 
-///Test Suite is a container for Test Cases with shared Setup/Teardown
-/**Setup is executed before each test case.
+///Information available before test suite execution starts
+/**Test Suite is a container for Test Cases with shared Setup/Teardown
+   Setup is executed before each test case.
    Teardown is executed after each test case.*/
 class ContextBeforeTestSuite{
 public:
@@ -280,8 +282,9 @@ public:
 
 };
 
-///Test Suite is a container for Test Cases with shared Setup/Teardown
-/**Setup is executed before each test case.
+///Information available after test suite has been executed
+/**Test Suite is a container for Test Cases with shared Setup/Teardown
+   Setup is executed before each test case.
    Teardown is executed after each test case.*/
 class ContextAfterTestSuite: public ContextBeforeTestSuite{
 public:
@@ -296,8 +299,8 @@ public:
     virtual unsigned TestCasesFailed() const = 0;
 };
 
-///Test case is an item in the Test Suite with set of checks
-/***/
+///Information available before test case execution starts
+/** Test case is an item in the Test Suite with set of checks */
 class ContextBeforeTestCase{
 public:
     ///Access to containing Test Suite
@@ -308,11 +311,17 @@ public:
 
 };
 
+///Information available after test case has been executed
+/** Test case is an item in the Test Suite with set of checks */
+class ContextAfterTestCase: public ContextBeforeTestCase{
+public:
+};
+
 ///
 class ContextForStatement{
 public:
     ///Access entire testing context (whole test or test case)
-    //virtual const ContextForTestCase& TestCase() const = 0;
+    virtual const ContextBeforeTestCase& TestCase() const = 0;
 };
 
 ///
@@ -338,6 +347,10 @@ public:
     ///
     virtual std::string ActualValue() const = 0;
 };
+
+
+//class OnMessage
+//class OnTrace
 
 
 //Progress reporting ----------------------------------------------------------
