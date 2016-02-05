@@ -1,10 +1,12 @@
 /** @file InstantUnit.h
     @brief Mimimalistic (header only) Unit Test framework for C++11 and above.
 
-Disclaimer: all samples below are just for illustration and they are
-            not intended to demonstrate 100% coverage etc.
+To use just include this header.
 
-Simple usage sample (single Test Case, without shared Setup/Teardown, all in one):
+Disclaimer: all samples below are just for illustration purposes and they are
+            not intended to demonstrate such techniques as 100% coverage etc.
+
+Simplest usage sample (single Test Case, Setup/Teardown are not shared, all in one):
 
 @code
     TEST("My test name"){
@@ -14,27 +16,28 @@ Simple usage sample (single Test Case, without shared Setup/Teardown, all in one
         v.push_back(20);
         v.push_back(31);
 
-        //On failure asserts will end current Test Case
+        //On failure those ASSERTs will end current Test Case
         ASSERT( !v.empty() );
         ASSERT(v.size()) == 3;
 
-        //Expects will still continue Test after failure
+        //EXPECTs will still continue Test, even after failure
         EXPECT(v.front()) == 10;
         EXPECT(v[1]) == 20;
         EXPECT(v.back()) == 31
     }
 @endcode
 
-Here
-      ASSERT causes Test to complete immediately when corresponding
+Here:
+      ASSERT shall cause Test to complete immediately when corresponding
              condition fails, the rest of the failed Test is skipped.
-      EXPECT (in contrast) just mark surrounding Test Case as failed,
+      EXPECT (in contrast) shall just mark surrounding Test Case as failed,
              but Test Case execution continues.
 
 Both ASSERT and EXPECT macro are intended to produce output
 and affect test execution statistics.
 
-There is also SANITY macro for "critical checks", see documentation below.
+There is also SANITY macro for "critical checks": once SANITY failed, no more
+test can be executed in the process, see documentation below.
 
 You can write a condition to be checked directly inside of the ASSERT
 or EXPECT macro:
@@ -180,37 +183,37 @@ Practical sample:
 
 
 ///Mark an expression or call as being subject to "assert test"
-/**Causes Test Case to complete immediately on "verify fail"
-   (when corresponding condition fails),
-   the rest of the failed test is skipped.
-   Following usages are possible:
-   @code
-       ASSERT(expression);                       //verify expression is not 0
-       ASSERT(expression) == valueToCompareWith; //verify expression == valueToCompareWith
-       ASSERT(expression) != valueToCompareWith; //verify expression != valueToCompareWith
-       ASSERT(expression) <  valueToCompareWith; //verify expression <  valueToCompareWith
-       ASSERT(expression) <= valueToCompareWith; //verify expression <= valueToCompareWith
-       ASSERT(expression) >  valueToCompareWith; //verify expression >  valueToCompareWith
-       ASSERT(expression) >= valueToCompareWith; //verify expression)>= valueToCompareWith
-   @endcode
-   Note1: only comparison operations are allowed
-          and ASSERT(expression) always goes first.
-
-   */
+/** Causes Test Case to complete immediately on "verify fail"
+  (when corresponding condition fails),
+  the rest of the failed test is skipped.
+  Following usages are possible:
+  @code
+    ASSERT(expression);                       //verify expression is not 0
+    ASSERT(expression) == valueToCompareWith; //verify expression == valueToCompareWith
+    ASSERT(expression) != valueToCompareWith; //verify expression != valueToCompareWith
+    ASSERT(expression) <  valueToCompareWith; //verify expression <  valueToCompareWith
+    ASSERT(expression) <= valueToCompareWith; //verify expression <= valueToCompareWith
+    ASSERT(expression) >  valueToCompareWith; //verify expression >  valueToCompareWith
+    ASSERT(expression) >= valueToCompareWith; //verify expression)>= valueToCompareWith
+  @endcode
+  Note1: only comparison operations are allowed
+         and ASSERT(expression) always goes first.
+*/
 #define ASSERT()
 //
 
 ///Mark an expression or call as being subject to "expect test"
-/**Just mark surrounding Test Case as failed on "verify fail",
-   but Test Case execution continues.
-   Usage is similar to ASSERT from above */
+/** Just mark surrounding Test Case as failed on "verify fail",
+    but Test Case execution continues.
+    Usage is similar to ASSERT from above */
 #define EXPECT()
 //
 
 ///"Fatal" check macro for "critical condition checks".
-/*Never go to output for "passed" case and do not affect statistics.
-  Failed SANITY check means entire test session is broken and cannot continue.
-  Usage is similar to ASSERT and EXPECT from above */
+/** Never go to output for "passed" case and do not affect statistics.
+ Failed SANITY check means entire test session is broken and cannot continue.
+ Once SANITY failed, no more test can be executed in the process (process exits)
+ Usage is similar to ASSERT and EXPECT from above */
 #define SANITY()
 
 namespace InstantUnit{
