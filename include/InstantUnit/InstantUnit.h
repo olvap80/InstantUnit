@@ -57,7 +57,7 @@ Use following syntax:
 
 Now value of x will go to the test output, and arguments passed to predicate
 are printed.
-InstantUnit::IsClose, from the sample above, is a predicate built
+InstantUnit::IsNear, from the sample above, is a predicate built
 into the framework, but you can write your own:
 
 @code
@@ -100,13 +100,15 @@ classes, override any functions, etc
 Here Test Suite is not only a collection of Test Cases but also a way
 to surround every Test Case in that collection with the Setup and Teardown code.
 
-Setup code from the Test Suite is executed before each Test Case like it was
-pasted directly before the Test Case body. You can declare variables in Setup
-and they will be visible from the Test Case body.
+Setup code from the Test Suite is executed before each Test Case like when
+it was pasted directly before the Test Case body.
+You can declare variables in Setup and
+they will be visible from the Test Case body.
 
-Teardown code from the Test Suite is executed after each Test Case like it is
-pasted directly after the test case body. Teardown code is still automatically
-executed even in case of exception in a Test Case body.
+Teardown code from the Test Suite is executed after each Test Case like when
+it is pasted directly after the test case body.
+Teardown code is still automatically executed even in case of exception in
+a Test Case body.
 Every variable declared in the Setup code is visible from the Teardown code.
 
 Practical sample:
