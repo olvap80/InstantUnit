@@ -347,7 +347,8 @@ Sample usage
     {
         return InstantUnit::RunTests(argc, argv);
     }
-@endcode */
+@endcode
+Note: use MAIN_RUN_TESTS instead of main that just redirects to RunTests*/
 int RunTets(int argc, char *argv[]);
 
 ///Run Test Suite by name
