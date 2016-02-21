@@ -15,7 +15,6 @@ TEST("Test 2")
 
 int main()
 {
-
     InstantUnit::RunTests();
     return 0;
 }

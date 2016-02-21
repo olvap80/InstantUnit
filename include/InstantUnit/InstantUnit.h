@@ -2,13 +2,15 @@
     @brief Mimimalistic (header only) Unit Test framework for C++11 and above.
 
 To use just include this header.
+There are no other dependencies then standard libraries.
 
-Disclaimer: all samples below are just for illustration purposes and they are
-            not intended to demonstrate such techniques as 100% coverage, etc.
-
-Simplest usage sample (single Test Case, Setup/Teardown are not shared, all in one):
+Simplest usage sample:
 
 @code
+
+    #include "InstantUnit/InstantUnit.h"
+    #include <vector>
+
     TEST("My test name"){
         //Setup statements (local for this test, not shared with others)
         std::vector<int> v;
@@ -25,21 +27,35 @@ Simplest usage sample (single Test Case, Setup/Teardown are not shared, all in o
         EXPECT(v[1]) == 20;
         EXPECT(v.back()) == 31
     }
+
+    MAIN_RUN_TESTS
+
 @endcode
 
 Here:
-      ASSERT shall cause Test to complete immediately when corresponding
-             condition fails, the rest of the failed Test is skipped.
-      EXPECT (in contrast) shall just mark surrounding Test Case as failed,
-             but Test Case execution continues.
+    -TEST   defines simple named Test Case, here Setup/Teardown are not shared
+            with others. You can define as many TEST items as you like,
+            in different files of the project and they all will be automatically
+            registered by InstantUnit framework for execution.
 
-Both ASSERT and EXPECT macro are intended to produce output
-and affect test execution statistics.
+    -ASSERT shall cause Test Case to complete immediately when corresponding
+            condition fails, so the rest of the failed Test Case is skipped.
 
-There is also SANITY macro for "critical checks": once SANITY failed, no more
-test can be executed in the process, see documentation below.
+    -EXPECT (in contrast) shall just mark the surrounding Test Case as "failed",
+            but the Test Case execution continues.
 
-You can write a condition to be checked directly inside of the ASSERT
+    -MAIN_RUN_TESTS is a macro to be used in place of main.
+                    Instead of placing MAIN_RUN_TESTS to run tests,
+                    you can just call to InstantUnit::RunTests()
+                    from any place you like.
+
+Note1: Both ASSERT and EXPECT macro are intended to produce test output
+and update test execution statistics.
+
+Note2: there is also a set of SANITY_* macro to ensure "critical conditions",
+see documentation below.
+
+You can write a condition to be checked directly inside the ASSERT
 or EXPECT macro:
 
 @code
@@ -48,22 +64,25 @@ or EXPECT macro:
 @endcode
 
 but when condition fails there will be no additional information "why failed".
-Use following syntax:
+TODO: output sample assuming x = 2 and y = 4.2.
+Use following syntax to make InstantUnit aware of the values being tested:
 
 @code
     EXPECT(x) > 3; //here InstantUnit is aware that we are comparing x with 3
-    EXPECT_CALL(InstantUnit::IsNear, y, 3, 0.1); //all parameters are traced now
+    EXPECT_CALL(InstantUnit::IsNear, y, 3, 0.1); //all parameters are traceable
 @endcode
 
 Now value of x will go to the test output, and arguments passed to predicate
-are printed.
-InstantUnit::IsNear, from the sample above, is a predicate built
-into the framework, but you can write your own:
+are printed to simplify debugging on failure.
+TODO: output sample assuming x = 2 and y = 4.2.
+Note: InstantUnit::IsNear, from the sample above, is a predicate built
+into the InstantUnit framework, but you can write your own:
 
 @code
     bool IsOdd(int v){
         return v & 0x1
     }
+    ...
     TEST("Test OddGenerator"){
         OddGenerator g;
 
@@ -71,12 +90,13 @@ into the framework, but you can write your own:
         ASSERT_CALL(IsOdd, g.GetNext());
         ASSERT_CALL(IsOdd, g.GetNext());
     }
+    ...
 @endcode
 
 More complex approach: add shared common Setup and Teardown. Please notice how
 those Setup and Teardown are located - there is no need to inherit from any
 classes, override any functions, etc
-    - just write your statements according to tamplate below:
+    - just write your statements according to the template below:
 
 @code
     TEST_SUITE("My Suite name"){ // ... __LINE__##_Run(NU::TestCaseRunner& NU_TestCaseRunner) {
@@ -113,6 +133,9 @@ Every variable declared in the Setup code is visible from the Teardown code.
 
 Practical sample:
 @code
+    #include "InstantUnit/InstantUnit.h"
+    #include <vector>
+
     TEST_SUITE("General std::vector teting"){
         //Setup code to be executed before every Test Case in the Suite
         std::vector<int> v;
@@ -121,10 +144,10 @@ Practical sample:
         v.push_back(31);
         //Note: now v with three filled items will be visible to every TEST_CASE below
 
+        SANITY_FOR_TEST_SUITE( !v.empty() );
 
         TEST_CASE("Test const operations"){
-            SANITY( !v.empty() );
-            SANITY(v.size()) == 3;
+            SANITY_FOR_TEST_CASE(v.size()) == 3;
 
             //Expects will still continue Test after failure
             EXPECT(v.front()) == 10;
@@ -132,20 +155,52 @@ Practical sample:
             EXPECT(v.back()) == 31
         }
         TEST_CASE("Test clear method"){
-            SANITY( !v.empty() );
             v.clear();
             ASSERT( v.empty() );
             ASSERT(v.size()) == 0;
         }
         TEST_CASE("Test pop_front"){
-            SANITY( !v.empty() );
-            SANITY(v.size()) > 3;
-            ...
+            //...
         }
         //etc...
     }
+
+    MAIN_RUN_TESTS
 @endcode
 
+Disclaimer: all samples here are just for illustration purposes and they are
+            not intended to demonstrate such techniques as 100% coverage, etc.
+
+                         * * *
+
+
+Copyright (c) 2015, Pavlo M, https://github.com/olvap80
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+* Neither the name of InstantJSON nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #ifndef INSTANTUNIT_HDR_
@@ -154,6 +209,7 @@ Practical sample:
 //depends only on standard stuff:
 
 #include <cstddef>
+#include <cstdlib>
 #include <cmath>
 #include <stdexcept>
 #include <string>
@@ -207,16 +263,28 @@ Practical sample:
   @endcode
   Note1: only comparison operations are allowed
          and ASSERT(expression) always goes first.
-*/
+  Note2: ASSERT can only be placed inside TEST or TEST_CASE */
 #define ASSERT()
 //
 
-///Mark an expression or call as being subject to "expect test"
+///Mark an expression or call as being subject of "expect test"
 /** Just mark surrounding Test Case as failed on "verify fail",
     but Test Case execution continues.
     Usage is similar to ASSERT from above */
 #define EXPECT()
 //
+
+
+
+#define SANITY_FOR_TEST
+#define SANITY_FOR_TEST_CASE
+
+#define SANITY_FOR_TEST_SUITE
+
+/*
+once SANITY has failed this means for the InstantUnit that the host process
+is corrupted/broken or there is no sense to continue, and now no more tests can be executed
+in this process instance,  */
 
 ///Check for conditions that break/corrupt entire process on failure
 /** Intended to make "Fatal" check macro for "critical condition checks".
@@ -224,35 +292,23 @@ Practical sample:
  Failed SANITY check means entire test session is broken and cannot continue.
  Once SANITY failed, no more test can be executed in the process (exit process).
  Usage is similar to ASSERT and EXPECT from above.*/
-#define SANITY()
+#define SANITY_FOR_TEST_SESSION()
 
+
+///Specify this macro to not define main manually
+#define MAIN_RUN_TESTS \
+    int main(int argc, char *argv[]) \
+    { \
+        return InstantUnit::RunTests(argc, argv); \
+    }
 
 //#############################################################################
-//Running tests, predefined predicates, reporting support
+//Predefined predicates, running tests options, reporting support
 //#############################################################################
 
 namespace InstantUnit{
 
 //=============================================================================
-//Running tests ---------------------------------------------------------------
-
-///Execute all known Test Suites as part of the full Test Session
-/** Test Suites to be run also include DEFAULT Test Suite */
-void RunTests();
-
-
-
-///Execute all Tests/Test Cases that pass predicate by name
-void RunTests(
-    const std::function<
-        bool(
-            const std::string& testSuiteName,
-            const std::string& testCaseName
-        )
-    >& testCaseFilter
-);
-
-
 //Predefined verifiers --------------------------------------------------------
 
 ///Test double values are equal with precission
@@ -268,6 +324,48 @@ inline bool IsBetween(T val, T fromInclusive, T toInclusive){
     return false;
 }
 
+
+//=============================================================================
+//Running tests ---------------------------------------------------------------
+
+///Execute all known Test Suites as part of the full Test Session
+/** Test Suites to be run also include DEFAULT Test Suite.
+    @returns true when all executed tests passed, false otherwise
+*/
+bool RunTests();
+
+///Add command line support for running tests
+/** @returns EXIT_SUCCESS when all executed tests passed, EXIT_FAILURE otherwise
+TODO: describe command line options here
+Sample usage
+@code
+    #include "InstantUnit/InstantUnit.h"
+
+    ...
+
+    int main(int argc, char *argv[])
+    {
+        return InstantUnit::RunTests(argc, argv);
+    }
+@endcode */
+int RunTets(int argc, char *argv[]);
+
+///Run Test Suite by name
+bool RunTestSuite(const std::string& suiteName);
+
+
+///Execute all Tests/Test Cases that pass predicate by name
+void RunTests(
+    const std::function<
+        bool(
+            const std::string& testSuiteName,
+            const std::string& testCaseName
+        )
+    >& testCaseFilter
+);
+
+
+//=============================================================================
 //Contexts for reporting ------------------------------------------------------
 
 ///All Tests in the process are executed in the context of Test Session
@@ -514,10 +612,10 @@ namespace details{
     class Runnable: public InstanceListBase<Runnable>{
     protected:
         ///Method to be runned for all found Runnable instances
-        virtual void Run() = 0;
+        virtual bool Run() = 0;
 
     private:
-        friend void InstantUnit::RunTests();
+        friend bool InstantUnit::RunTests();
     };
 
     ///Base class to be executed while running tests
@@ -531,9 +629,10 @@ namespace details{
 
     private:
         ///Method to be runned for all found Runnable instances
-        virtual void Run(){
+        virtual bool Run(){
             try{
                 DoTest();
+                return true;
             }
             catch(const TestCaseFailed&){
             }
@@ -541,19 +640,20 @@ namespace details{
             }
             catch(...){
             }
+            return false;
         }
 
-
-        friend void Run();
     };
 } //namespace InstantUnit::details
 
-inline void RunTests(){
+inline bool RunTests(){
+    bool allPassed = true;
     details::InstanceListBase<details::Runnable>::ForEachInstance(
-        [](details::Runnable* ptr){
-            ptr->Run();
+        [&](details::Runnable* ptr){
+            allPassed = allPassed && ptr->Run();
         }
     );
+    return allPassed;
 }
 
 } //namespace InstantUnit
