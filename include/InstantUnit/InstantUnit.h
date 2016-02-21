@@ -4,7 +4,7 @@
 To use just include this header.
 
 Disclaimer: all samples below are just for illustration purposes and they are
-            not intended to demonstrate such techniques as 100% coverage etc.
+            not intended to demonstrate such techniques as 100% coverage, etc.
 
 Simplest usage sample (single Test Case, Setup/Teardown are not shared, all in one):
 
@@ -151,6 +151,8 @@ Practical sample:
 #ifndef INSTANTUNIT_HDR_
 #define INSTANTUNIT_HDR_
 
+//depends only on standard stuff:
+
 #include <cstddef>
 #include <cmath>
 #include <stdexcept>
@@ -159,8 +161,13 @@ Practical sample:
 #include <functional>
 
 
-///Simple Test (standalone Test Case without shared Setup/Teardown stuff)
-/** Place Test code in braces after TEST macro*/
+//#############################################################################
+//Macros for creating and grouping tests
+//#############################################################################
+
+///Simple named Test (standalone Test Case without shared Setup/Teardown stuff)
+/** Place Test code in braces after TEST macro.
+    Such test suite will be a part of the "DEFAULT" Test Session*/
 #define TEST(testNameString) \
     /*Class to run test code in*/ \
     class IU_CAT_ID(Test_,__LINE__): private InstantUnit::details::SimpleRunner{ \
@@ -174,8 +181,8 @@ Practical sample:
     /*Test body will follow below*/ \
     void IU_CAT_ID(Test_,__LINE__)::DoTest()
 
-///Group Test Cases together to support common Setup/Teardown
-/**Place Test Setup, then Test Cases and then Teardown.
+///Named group of Test Cases together to support common Setup/Teardown
+/**Place Test Setup at top, then Test Cases and then Teardown at bottom.
    See example above on how to use this stuff.*/
 #define TEST_SUITE(testSuiteNameString) \
     class testSuiteNameString##_TestSuite:
@@ -211,17 +218,40 @@ Practical sample:
 #define EXPECT()
 //
 
-///"Fatal" check macro for "critical condition checks".
-/** Never go to output for "passed" case and do not affect statistics.
+///Check for conditions that break/corrupt entire process on failure
+/** Intended to make "Fatal" check macro for "critical condition checks".
+ Never goes to output for "passed" case and does not affect statistics.
  Failed SANITY check means entire test session is broken and cannot continue.
- Once SANITY failed, no more test can be executed in the process (process exits)
- Usage is similar to ASSERT and EXPECT from above */
+ Once SANITY failed, no more test can be executed in the process (exit process).
+ Usage is similar to ASSERT and EXPECT from above.*/
 #define SANITY()
+
+
+//#############################################################################
+//Running tests, predefined predicates, reporting support
+//#############################################################################
 
 namespace InstantUnit{
 
-///Execute all known Test Suites as part of default Test Session
+//=============================================================================
+//Running tests ---------------------------------------------------------------
+
+///Execute all known Test Suites as part of the full Test Session
+/** Test Suites to be run also include DEFAULT Test Suite */
 void RunTests();
+
+
+
+///Execute all Tests/Test Cases that pass predicate by name
+void RunTests(
+    const std::function<
+        bool(
+            const std::string& testSuiteName,
+            const std::string& testCaseName
+        )
+    >& testCaseFilter
+);
+
 
 //Predefined verifiers --------------------------------------------------------
 
