@@ -33,16 +33,17 @@ Simplest usage sample:
 @endcode
 
 Here:
-    -TEST   defines simple named Test Case, here Setup/Teardown are not shared
+    -TEST   defines simple named Test Case, where Setup/Teardown are not shared
             with others. You can define as many TEST items as you like,
             in different files of the project and they all will be automatically
             registered by InstantUnit framework for execution.
 
-    -ASSERT shall cause Test Case to complete immediately when corresponding
-            condition fails, so the rest of the failed Test Case is skipped.
+    -ASSERT shall report failed condition and cause Test Case to complete
+            immediately when corresponding condition fails,
+            so the rest of the failed Test Case is skipped.
 
-    -EXPECT (in contrast) shall just mark the surrounding Test Case as "failed",
-            but the Test Case execution continues.
+    -EXPECT (in contrast) on failure shall just mark the surrounding Test Case
+            as "failed", but the Test Case execution continues.
 
     -MAIN_RUN_TESTS is a macro to be used in place of main.
                     Instead of placing MAIN_RUN_TESTS to run tests,
@@ -50,10 +51,11 @@ Here:
                     from any place you like.
 
 Note1: Both ASSERT and EXPECT macro are intended to produce test output
-and update test execution statistics.
+       and update test execution statistics.
 
 Note2: there is also a set of SANITY_* macro to ensure "critical conditions",
-see documentation below.
+       that do not produce test output in when passed,
+       see documentation below.
 
 You can write a condition to be checked directly inside the ASSERT
 or EXPECT macro:
@@ -65,6 +67,7 @@ or EXPECT macro:
 
 but when condition fails there will be no additional information "why failed".
 TODO: output sample assuming x = 2 and y = 4.2.
+
 Use following syntax to make InstantUnit aware of the values being tested:
 
 @code
@@ -75,6 +78,7 @@ Use following syntax to make InstantUnit aware of the values being tested:
 Now value of x will go to the test output, and arguments passed to predicate
 are printed to simplify debugging on failure.
 TODO: output sample assuming x = 2 and y = 4.2.
+
 Note: InstantUnit::IsNear, from the sample above, is a predicate built
 into the InstantUnit framework, but you can write your own:
 
@@ -241,7 +245,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /**Place Test Setup at top, then Test Cases and then Teardown at bottom.
    See example above on how to use this stuff.*/
 #define TEST_SUITE(testSuiteNameString) \
-    class testSuiteNameString##_TestSuite:
+    TEST(testNameString) TODO
 
 ///Single Test Case item in the Test Suite (share Setup/Teardown with others)
 #define TEST_CASE(testCaseNameString)
@@ -276,8 +280,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-#define SANITY_FOR_TEST
-#define SANITY_FOR_TEST_CASE
+#define SANITY_FOR_TEST(condition) SANITY_FOR_TEST_CASE(condition)
+#define SANITY_FOR_TEST_CASE(condition)
 
 #define SANITY_FOR_TEST_SUITE
 
@@ -434,7 +438,8 @@ public:
 };
 
 ///Information available before test case execution starts
-/** Test case is an item in the Test Suite with set of checks */
+/** Test case is an item in the Test Suite with set of checks.
+Note: both TEST and TEST_CASE macro map here.*/
 class ContextBeforeTestCase{
 public:
     ///Access to containing Test Suite
@@ -446,9 +451,16 @@ public:
 };
 
 ///Information available after test case has been executed
-/** Test case is an item in the Test Suite with set of checks */
+/** Test case is an item in the Test Suite with set of checks.
+Note: both TEST and TEST_CASE macro map here. */
 class ContextAfterTestCase: public ContextBeforeTestCase{
 public:
+
+    ///
+    virtual bool IsPassed() const;
+
+    ///
+    virtual bool IsFailed() const;
 };
 
 ///
