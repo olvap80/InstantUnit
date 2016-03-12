@@ -473,16 +473,16 @@ public:
 class ContextAfterTestCase: public ContextBeforeTestCase{
 public:
 
-    ///
+    ///Indicate "Passed" mark for entire Test Case
     virtual bool IsPassed() const = 0;
 
-    ///
+    ///Indicate "Failed" mark for entire Test Case
     virtual bool IsFailed() const = 0;
 };
 
 
 ///
-class ContextBeforeVerify{
+class ContextBeforeCheck{
 public:
     ///Access entire testing context (whole test or test case)
     virtual const ContextBeforeTestCase& TestCase() const = 0;
@@ -493,7 +493,7 @@ public:
 
 
 ///
-class ContextAfterVerify: public ContextBeforeVerify{
+class ContextAfterCheck: public ContextBeforeCheck{
 public:
     ///
     virtual bool IsPassed() const = 0;
@@ -508,6 +508,32 @@ public:
     virtual std::string ActualValue() const = 0;
 };
 
+///
+class ContextBeforeCheckCall{
+public:
+    ///Access entire testing context (whole test or test case)
+    virtual const ContextBeforeTestCase& TestCase() const = 0;
+
+    ///
+    virtual std::string StepText() const = 0;
+};
+
+
+///
+class ContextAfterCheckCall: public ContextBeforeCheckCall{
+public:
+    ///
+    virtual bool IsPassed() const = 0;
+
+    ///Text representation of entire expression to be verified
+    virtual std::string ExpresionText() const = 0;
+
+    ///
+    virtual std::string ExpectedValue() const = 0;
+
+    ///
+    virtual std::string ActualValue() const = 0;
+};
 
 //class OnMessage
 //class OnTrace
@@ -518,19 +544,32 @@ public:
 ///Report tests execution progress
 class Reporter{
 public:
+    ///Called before the Test Session execution
+    virtual void OnItem(const ContextBeforeTestSession& context) = 0;
+    ///Called after the Test Session has been executed
+    virtual void OnItem(const ContextAfterTestSession&  context) = 0;
 
-    virtual void OnBeforeTestSession(const ContextBeforeTestSession& context) = 0;
-    virtual void OnAfterTestSession (const ContextAfterTestSession&  context) = 0;
+    ///Called before each Test Suite execution
+    virtual void OnItem(const ContextBeforeTestSuite& context) = 0;
+    ///Called after each Test Suite has been executed
+    virtual void OnItem(const ContextAfterTestSuite&  context) = 0;
 
-    virtual void OnBeforeTestSuite(const ContextBeforeTestSuite& context) = 0;
-    virtual void OnAfterTestSuite (const ContextAfterTestSuite&  context) = 0;
+    ///Called before each Test Case execution
+    /**Note: both TEST and TEST_CASE map here*/
+    virtual void OnItem(const ContextBeforeTestCase& context) = 0;
+    ///Called after each Test Case has been executed
+    /**Note: both TEST and TEST_CASE map here*/
+    virtual void OnItem(const ContextAfterTestCase&  context) = 0;
 
-    virtual void OnBeforeTestCase(const ContextBeforeTestCase& context) = 0;
-    virtual void OnAfterTestCase (const ContextAfterTestCase&  context) = 0;
+    ///Called before each Check (ASSERT or EXPECT) execution
+    virtual void OnItem(const ContextBeforeCheck& context) = 0;
+    ///Called after each Check (ASSERT or EXPECT) has been executed
+    virtual void OnItem(const ContextAfterCheck&  context) = 0;
 
-    virtual void OnBeforeVerify(const ContextBeforeVerify& context) = 0;
-    virtual void OnAfterVerify(const ContextAfterVerify& context) = 0;
-
+    ///Called before each Check (ASSERT_CALL or EXPECT_CALL) execution
+    virtual void OnItem(const ContextBeforeCheckCall& context) = 0;
+    ///Called after each Check (ASSERT_CALL or EXPECT_CALL) has been executed
+    virtual void OnItem(const ContextAfterCheckCall&  context) = 0;
     /*
     ///Called before test step is being executed
     virtual void OnStep(const ContextForStep& contextForStep) = 0;
