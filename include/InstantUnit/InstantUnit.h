@@ -2,7 +2,8 @@
     @brief Mimimalistic (header only) Unit Test framework for C++11 and above.
 
 To use just include this header.
-There are no other dependencies then standard libraries.
+There are no other dependencies then standard libraries,
+no installation needed, copy-paste of this single file will also work :)
 
 Simplest usage sample:
 
@@ -21,6 +22,7 @@ Simplest usage sample:
         //On failure those ASSERTs will end current Test Case
         ASSERT( !v.empty() );
         ASSERT(v.size()) == 3;
+        ASSERT(v.capacity()) > 0;
 
         //EXPECTs will still continue Test, even after failure
         EXPECT(v.front()) == 10;
@@ -54,7 +56,7 @@ Note1: Both ASSERT and EXPECT macro are intended to produce test output
        and update test execution statistics.
 
 Note2: there is also a set of SANITY_* macro to ensure "critical conditions",
-       that do not produce test output in when passed,
+       that do not produce any test output when passed,
        see documentation below.
 
 You can write a condition to be checked directly inside the ASSERT
