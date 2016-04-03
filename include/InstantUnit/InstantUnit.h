@@ -74,7 +74,7 @@ Use following syntax to make InstantUnit aware of the values being tested:
 
 @code
     EXPECT(x) > 3; //here InstantUnit is aware that we are comparing x with 3
-    EXPECT_CALL(InstantUnit::IsNear, y, 3, 0.1); //all parameters are traceable
+    EXPECT(InstantUnit::IsNear)(y, 3, 0.1); //all parameters are traceable
 @endcode
 
 Now value of x will go to the test output, and arguments passed to predicate
@@ -92,9 +92,9 @@ into the InstantUnit framework, but you can write your own:
     TEST("Test OddGenerator"){
         OddGenerator g;
 
-        ASSERT_CALL(IsOdd, g.GetNext());
-        ASSERT_CALL(IsOdd, g.GetNext());
-        ASSERT_CALL(IsOdd, g.GetNext());
+        ASSERT(IsOdd)(g.GetNext());
+        ASSERT(IsOdd)(g.GetNext());
+        ASSERT(IsOdd)(g.GetNext());
     }
     ...
 @endcode
@@ -286,7 +286,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
 ///Mark a function call as being subject to "expect test"
-#define ASSERT_CALL(...)
+#define EXPECT_CALL(...)
 
 
 #define SANITY_FOR_TEST(condition) SANITY_FOR_TEST_CASE(condition)
@@ -510,6 +510,7 @@ public:
     virtual std::string ActualValue() const = 0;
 };
 
+/*
 ///
 class ContextBeforeCheckCall{
 public:
@@ -536,6 +537,8 @@ public:
     ///
     virtual std::string ActualValue() const = 0;
 };
+
+*/
 
 //class OnMessage
 //class OnTrace
@@ -568,10 +571,35 @@ public:
     ///Called after each Check (ASSERT or EXPECT) has been executed
     virtual void OnItem(const ContextAfterCheck&  context) = 0;
 
+    /*
+    TODO: use "Replacement only occurrs for a function-like macro if the macro
+               name is followed by a left parenthesis"
+
+    see http://stackoverflow.com/questions/4251005/what-is-the-difference-between-a-preprocessor-macro-with-no-arguments-and-one-w
+
+    and
+
+    #include <iostream>
+    using namespace std;
+
+    int M = 500;
+
+    #define M(a) (100)
+
+    int main() {
+        // your code goes here
+        std::cout<<M(1)<<std::endl;
+        std::cout<<M()<<std::endl;
+        std::cout<<M<<std::endl;
+        return 0;
+    }
+
     ///Called before each Check (ASSERT_CALL or EXPECT_CALL) execution
     virtual void OnItem(const ContextBeforeCheckCall& context) = 0;
     ///Called after each Check (ASSERT_CALL or EXPECT_CALL) has been executed
     virtual void OnItem(const ContextAfterCheckCall&  context) = 0;
+    */
+
     /*
     ///Called before test step is being executed
     virtual void OnStep(const ContextForStep& contextForStep) = 0;
