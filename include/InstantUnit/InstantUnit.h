@@ -1,5 +1,5 @@
 /** @file InstantUnit.h
-    @brief Mimimalistic (header only) Unit Test framework for C++11 and above.
+    @brief Minimalistic (header only) Unit Test framework for C++11 and above.
 
 To use just include this header.
 There are no other dependencies then standard libraries,
@@ -282,8 +282,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /** Just mark surrounding Test Case as failed on "verify fail",
     but Test Case execution continues.
     Usage is similar to ASSERT from above */
-#define EXPECT(expression)
-//
+#define EXPECT(expression) \
+    InstantUnit::
 
 ///Mark a function call as being subject to "expect test"
 #define EXPECT_CALL(...)
@@ -649,11 +649,7 @@ namespace details{
     ///Exception to be used to signal that test case failed
     class TestCaseFailed{};
 
-    ///
-    class Context{
-    public:
-        //void Step
-    };
+    class Context{};
 
     ///Wrap value being tested
     template<class T>
@@ -672,6 +668,18 @@ namespace details{
             };
         }
     };
+
+    /*
+    struct ValueWrapMaker{
+        ValueWrapMaker(Reporter& reporterToUse, const char* stepText)
+            : reporter(reporterToUse)
+            //, contextBeforeCheck()
+        {
+
+        }
+    private:
+        Reporter& reporter;
+    };*/
 
     ///Helper to create list of static/global object instances
     /**Every derived instance will be a part of the global list.

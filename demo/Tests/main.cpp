@@ -2,10 +2,17 @@
 #include <iostream>
 
 
+int fcn(int val){
+   return 2*val;
+}
+
 TEST("Test 1")
 {
-    //UI_ASSERT("");
     std::cout << "InstantUnit 111" << std::endl;
+
+    //EXPECT(true);
+    //EXPECT(10) == 10;
+    //EXPECT(fcn)(25) == 50;
 }
 
 TEST("Test 2")
