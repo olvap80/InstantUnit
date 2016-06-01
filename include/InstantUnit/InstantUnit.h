@@ -674,16 +674,83 @@ namespace details{
 ///Exception to be used to signal that test case failed
 class TestCaseFailed{};
 
+
+///
+template<class Derived, class BaseToOverrideMethodsFrom>
+class ContinuousActivity: public BaseToOverrideMethodsFrom{
+public:
+    //information available once activity started
+
+    std::chrono::system_clock::time_point StartTimePoint() const override{
+        return startTimePoint;
+    }
+
+    std::chrono::steady_clock::time_point StartSteadyTimePoint() const override{
+        return startSteadyTimePoint;
+    }
+
+    //information available after activity completed
+
+    std::chrono::system_clock::time_point EndTimePoint() const override{
+        static_cast<const Derived*>(this)->CheckIfReady("EndTimePoint");
+        return endTimePoint;
+    }
+
+    std::chrono::steady_clock::time_point EndSteadyTimePoint() const override{
+        static_cast<const Derived*>(this)->CheckIfReady("EndSteadyTimePoint");
+        return endSteadyTimePoint;
+    }
+
+
+    std::chrono::steady_clock::duration Duration() const override{
+        static_cast<const Derived*>(this)->CheckIfReady("Duration");
+        return activityDuration;
+    }
+
+    std::chrono::seconds::rep DurationSeconds() const override{
+        static_cast<const Derived*>(this)->CheckIfReady("DurationSeconds");
+        return std::chrono::duration_cast<std::chrono::seconds>(activityDuration).count();
+    }
+
+protected:
+    ///Called by derived class once activity starts
+    void OnActivityStart(){
+        startTimePoint = std::chrono::system_clock::now();
+        startSteadyTimePoint = std::chrono::steady_clock::now();
+    }
+
+    ///Called by derived class once activity completed
+    void OnActivityComplete(){
+        endTimePoint = std::chrono::system_clock::now();
+        endSteadyTimePoint = std::chrono::steady_clock::now();
+
+
+        activityDuration =   endSteadyTimePoint
+                           - startSteadyTimePoint;
+    }
+
+private:
+    std::chrono::system_clock::time_point startTimePoint;
+    std::chrono::steady_clock::time_point startSteadyTimePoint;
+
+    std::chrono::system_clock::time_point endTimePoint;
+    std::chrono::steady_clock::time_point endSteadyTimePoint;
+    std::chrono::steady_clock::duration activityDuration;
+};
+
+
 //Contexts used for testing
 
 ///Collect information available before/after Test Session
-class FullContextForTestSession: public ContextAfterTestSession{
+class FullContextForTestSession:
+    public ContinuousActivity<FullContextForTestSession, ContextAfterTestSession>{
 public:
     ///Initialize start date/time by current moment and autogenerate name
     FullContextForTestSession()
       : testSessionName("Test session ")
     {
-        std::time_t epoch_time = std::chrono::system_clock::to_time_t(testSessionStartTimePoint);
+        OnActivityStart();
+        std::time_t epoch_time = std::chrono::system_clock::to_time_t(StartTimePoint());
         testSessionName += std::ctime(&epoch_time);
     }
 
@@ -700,14 +767,6 @@ public:
         return testSessionName;
     }
 
-    std::chrono::system_clock::time_point StartTimePoint() const override{
-        return testSessionStartTimePoint;
-    }
-
-    std::chrono::steady_clock::time_point StartSteadyTimePoint() const override{
-        return testSessionStartSteadyTimePoint;
-    }
-
     virtual unsigned TestSuitesTotal() const override{
         //TODO:
         return 0;
@@ -715,28 +774,6 @@ public:
 
 
     //override from ContextAfterTestSession
-
-
-    std::chrono::system_clock::time_point EndTimePoint() const override{
-        CheckIfReady("TestSessionEndTimePoint");
-        return testSessionEndTimePoint;
-    }
-
-    std::chrono::steady_clock::time_point EndSteadyTimePoint() const override{
-        CheckIfReady("TestSessionEndSteadyTimePoint");
-        return testSessionEndSteadyTimePoint;
-    }
-
-
-    std::chrono::steady_clock::duration Duration() const override{
-        CheckIfReady("TestSessionDuration");
-        return testSessionDuration;
-    }
-
-    std::chrono::seconds::rep DurationSeconds() const override{
-        CheckIfReady("TestSessionDurationSeconds");
-        return std::chrono::duration_cast<std::chrono::seconds>(testSessionDuration).count();
-    }
 
 
     unsigned TestCasesTotal() const override{
@@ -772,13 +809,7 @@ public:
 
 
     void OnTestSessionComplete(){
-        testSessionEndTimePoint = std::chrono::system_clock::now();
-        testSessionEndSteadyTimePoint = std::chrono::steady_clock::now() ;
-
-
-        testSessionDuration =  testSessionEndSteadyTimePoint
-                              -testSessionStartSteadyTimePoint;
-
+        OnActivityComplete();
         //make "after" part available
         ready = true;
     }
@@ -786,6 +817,7 @@ public:
 
     //TODO: collection of test suites ?
 private:
+    friend class ContinuousActivity<FullContextForTestSession, ContextAfterTestSession>;
     ///Ensure "after" part is available
     void CheckIfReady(const char* calledFrom) const {
         if( !ready ){
@@ -795,17 +827,7 @@ private:
     ///Flag is set to true after test session is executed
     bool ready = false;
 
-
-    std::chrono::system_clock::time_point testSessionStartTimePoint
-        = std::chrono::system_clock::now();
-    std::chrono::steady_clock::time_point testSessionStartSteadyTimePoint
-        = std::chrono::steady_clock::now();
-
     std::string testSessionName; ///<by default is derived from start time
-
-    std::chrono::system_clock::time_point testSessionEndTimePoint;
-    std::chrono::steady_clock::time_point testSessionEndSteadyTimePoint;
-    std::chrono::steady_clock::duration testSessionDuration;
 
     unsigned testCasesTotal = 0;
     unsigned testCasesPassed = 0;
