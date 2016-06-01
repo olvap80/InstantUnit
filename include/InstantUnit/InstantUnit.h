@@ -682,32 +682,38 @@ public:
     //information available once activity started
 
     std::chrono::system_clock::time_point StartTimePoint() const override{
+        checkIfStarted();
         return startTimePoint;
     }
 
     std::chrono::steady_clock::time_point StartSteadyTimePoint() const override{
+        checkIfStarted();
         return startSteadyTimePoint;
     }
 
     //information available after activity completed
 
     std::chrono::system_clock::time_point EndTimePoint() const override{
+        checkIfStarted();
         static_cast<const Derived*>(this)->CheckIfReady("EndTimePoint");
         return endTimePoint;
     }
 
     std::chrono::steady_clock::time_point EndSteadyTimePoint() const override{
+        checkIfStarted();
         static_cast<const Derived*>(this)->CheckIfReady("EndSteadyTimePoint");
         return endSteadyTimePoint;
     }
 
 
     std::chrono::steady_clock::duration Duration() const override{
+        checkIfStarted();
         static_cast<const Derived*>(this)->CheckIfReady("Duration");
         return activityDuration;
     }
 
     std::chrono::seconds::rep DurationSeconds() const override{
+        checkIfStarted();
         static_cast<const Derived*>(this)->CheckIfReady("DurationSeconds");
         return std::chrono::duration_cast<std::chrono::seconds>(activityDuration).count();
     }
@@ -717,6 +723,7 @@ protected:
     void OnActivityStart(){
         startTimePoint = std::chrono::system_clock::now();
         startSteadyTimePoint = std::chrono::steady_clock::now();
+        started = true;
     }
 
     ///Called by derived class once activity completed
@@ -730,6 +737,13 @@ protected:
     }
 
 private:
+    bool started = false;
+    void checkIfStarted() const {
+        if( !started ){
+            //TODO: report error
+        }
+    }
+
     std::chrono::system_clock::time_point startTimePoint;
     std::chrono::steady_clock::time_point startSteadyTimePoint;
 
