@@ -22,6 +22,9 @@ TEST("Test 2")
 
 int main()
 {
+    /*InstantUnit::ContextBeforeTestSuite* cb = nullptr;
+    InstantUnit::ContextAfterTestSuite* ca = static_cast<InstantUnit::ContextAfterTestSuite*>(cb);*/
+
     InstantUnit::RunTests();
     return 0;
 }

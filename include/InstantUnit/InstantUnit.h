@@ -414,8 +414,19 @@ public:
 
 ///Support information available after Test Session completed (after all tests)
 /** All Tests in the process are executed in the context of the Test Session */
-class ContextAfterTestSession: public ContextBeforeTestSession{
+class ContextAfterTestSession: protected ContextBeforeTestSession{
 public:
+    //All stuff from ContextBeforeTestSession also available
+    using ContextBeforeTestSession::Name;
+    using ContextBeforeTestSession::StartTimePoint;
+    using ContextBeforeTestSession::StartSteadyTimePoint;
+    using ContextBeforeTestSession::TestSuitesTotal;
+
+    ///Only explicit cast to ContextBeforeTestSession
+    const ContextBeforeTestSession& ContextBefore() const{
+        return *this;
+    }
+
     ///Test session end time point
     virtual std::chrono::system_clock::time_point EndTimePoint() const = 0;
 
@@ -470,8 +481,17 @@ public:
    Teardown is executed after each test case.
    Note: those tests created with TEST macro (that do not share Setup or
          Teardown) are part of the "DEFAULT" Test Session*/
-class ContextAfterTestSuite: public ContextBeforeTestSuite{
+class ContextAfterTestSuite: protected ContextBeforeTestSuite{
 public:
+    //All stuff from ContextBeforeTestSuite also available
+    using ContextBeforeTestSuite::Name;
+    using ContextBeforeTestSuite::ContainingTestSession;
+
+    //Only explicit cast to ContextBeforeTestSuite
+    const ContextBeforeTestSuite& ContextBefore() const{
+        return *this;
+    }
+
     ///Number of all test cases in this test suite
     virtual unsigned TestCasesTotal() const = 0;
 
@@ -871,7 +891,7 @@ public:
     }
 
     const ContextBeforeTestSession& ContainingTestSession() const override{
-        return parentTestSession;
+        return parentTestSession.ContextBefore();
     }
 
 
@@ -958,7 +978,7 @@ public:
     }
 
     const ContextBeforeTestSuite& ContainingTestSuite() const override{
-        return parentTestSuite;
+        return parentTestSuite.ContextBefore();
     }
 
     //override from ContextAfterTestCase
