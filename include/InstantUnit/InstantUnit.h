@@ -385,6 +385,8 @@ void RunTests(
 
 //=============================================================================
 //Contexts for reporting and statistics ---------------------------------------
+//Note: usually one does no need to look below unless new reporter is needed
+
 
 ///Support information available before Test Session starts (before any testing)
 /** All Tests in the process are executed in the context of the Test Session */
@@ -444,6 +446,7 @@ public:
     virtual unsigned TestCasesFailed() const = 0;
 };
 
+
 ///Information available before Test Suite execution starts
 /**Test Suite is a container for Test Cases with shared Setup/Teardown
    Setup is executed before each test case.
@@ -479,17 +482,17 @@ public:
     virtual unsigned TestCasesFailed() const = 0;
 };
 
+
 ///Information available before test case execution starts
 /** Test case is an item in the Test Suite with set of checks.
     Note: both TEST and TEST_CASE macro map here.*/
 class ContextBeforeTestCase{
 public:
+    ///Name used in corresponding TEST or TEST_CASE macro
+    virtual std::string Name() const = 0;
+
     ///Access to containing Test Suite
     virtual const ContextBeforeTestSuite& ContainingTestSuite() const = 0;
-
-    ///Name used in corresponding TEST or TEST_CASE macro
-    virtual std::string TestCaseName() const = 0;
-
 };
 
 ///Information available after test case has been executed
@@ -848,16 +851,17 @@ private:
     unsigned testCasesFailed = 0;
 };
 
+
 ///Collect information available before/after Test Suite
 class FullContextForTestSuite: public ContextAfterTestSuite{
 public:
     ///Create named TestSuite (package of test cases)
     FullContextForTestSuite(
-        FullContextForTestSession& parentTestSessionUsed,
-        const std::string& testSuiteNameToUse
+        const std::string& testSuiteNameToUse,
+        FullContextForTestSession& parentTestSessionUsed
     )
-        :   parentTestSession(parentTestSessionUsed),
-            testSuiteName(testSuiteNameToUse) {}
+        :   testSuiteName(testSuiteNameToUse),
+            parentTestSession(parentTestSessionUsed) {}
 
 
     //override from ContextBeforeTestSuite
@@ -916,18 +920,76 @@ private:
     ///Ensure "after" part is available
     void CheckIfReady(const char* calledFrom) const {
         if( !ready ){
-            //TODO: one should call this only after Test Session completed
+            //TODO: one should call this only after Test Suite completed
         }
     }
-    ///Flag is set to true after test session is executed
+    ///Flag is set to true after TestSuite is executed
     bool ready = false;
 
-    FullContextForTestSession& parentTestSession;
     std::string testSuiteName;
+    FullContextForTestSession& parentTestSession;
 
     unsigned testCasesTotal = 0;
     unsigned testCasesPassed = 0;
     unsigned testCasesFailed = 0;
+};
+
+
+///Collect information available before/after TestCase
+class FullContextForTestCase: public ContextAfterTestCase{
+public:
+    ///Function to execute test case, return true when passed, false otherwise
+    typedef std::function<bool()> CodeToRunForTest;
+
+    ///Create named TestCase
+    FullContextForTestCase(
+        const std::string& testCaseNameToUse,
+        FullContextForTestSuite& parentTestSuiteUsed,
+        CodeToRunForTest codeToRunForTest
+    )
+        :   testCaseName(testCaseNameToUse),
+            parentTestSuite(parentTestSuiteUsed),
+            codeToRun(codeToRunForTest) {}
+
+    //override from ContextBeforeTestCase
+
+    std::string Name() const override{
+        return testCaseName;
+    }
+
+    const ContextBeforeTestSuite& ContainingTestSuite() const override{
+        return parentTestSuite;
+    }
+
+    //override from ContextAfterTestCase
+
+    bool IsPassed() const override{
+        CheckIfReady("IsPassed");
+        return isPassed;
+    }
+
+    bool IsFailed() const override{
+        CheckIfReady("IsFailed");
+        return !isPassed;
+    }
+
+    //
+
+private:
+    ///Ensure "after" part is available
+    void CheckIfReady(const char* calledFrom) const {
+        if( !ready ){
+            //TODO: one should call this only after Test Case completed
+        }
+    }
+    ///Flag is set to true after TestCase is executed
+    bool ready = false;
+
+    std::string testCaseName;
+    FullContextForTestSuite& parentTestSuite;
+
+    CodeToRunForTest codeToRun;
+    bool isPassed = false;
 };
 
 
