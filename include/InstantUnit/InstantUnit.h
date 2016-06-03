@@ -387,6 +387,12 @@ void RunTests(
 //Contexts for reporting and statistics ---------------------------------------
 //Note: usually one does no need to look below unless new reporter is needed
 
+//forward declare implementation details referred
+namespace details{
+    class FullContextForTestSuite;
+    class FullContextForTestCase;
+}
+
 
 ///Support information available before Test Session starts (before any testing)
 /** All Tests in the process are executed in the context of the Test Session */
@@ -415,17 +421,13 @@ public:
 ///Support information available after Test Session completed (after all tests)
 /** All Tests in the process are executed in the context of the Test Session */
 class ContextAfterTestSession: protected ContextBeforeTestSession{
+    friend class details::FullContextForTestSuite;
 public:
     //All stuff from ContextBeforeTestSession also available
     using ContextBeforeTestSession::Name;
     using ContextBeforeTestSession::StartTimePoint;
     using ContextBeforeTestSession::StartSteadyTimePoint;
     using ContextBeforeTestSession::TestSuitesTotal;
-
-    ///Only explicit cast to ContextBeforeTestSession
-    const ContextBeforeTestSession& ContextBefore() const{
-        return *this;
-    }
 
     ///Test session end time point
     virtual std::chrono::system_clock::time_point EndTimePoint() const = 0;
@@ -482,6 +484,7 @@ public:
    Note: those tests created with TEST macro (that do not share Setup or
          Teardown) are part of the "DEFAULT" Test Session*/
 class ContextAfterTestSuite: protected ContextBeforeTestSuite{
+    friend class details::FullContextForTestCase;
 public:
     //All stuff from ContextBeforeTestSuite also available
     using ContextBeforeTestSuite::Name;
@@ -543,8 +546,11 @@ public:
 ///
 class ContextAfterCheck: public ContextBeforeCheck{
 public:
-    ///
+    ///Indicate "Passed" mark for check
     virtual bool IsPassed() const = 0;
+
+    ///Indicate "Failed" mark for check
+    virtual bool IsFailed() const = 0;
 
     ///Text representation of entire expression to be verified
     virtual std::string ExpresionText() const = 0;
@@ -891,7 +897,7 @@ public:
     }
 
     const ContextBeforeTestSession& ContainingTestSession() const override{
-        return parentTestSession.ContextBefore();
+        return parentTestSession;
     }
 
 
@@ -978,7 +984,7 @@ public:
     }
 
     const ContextBeforeTestSuite& ContainingTestSuite() const override{
-        return parentTestSuite.ContextBefore();
+        return parentTestSuite;
     }
 
     //override from ContextAfterTestCase
