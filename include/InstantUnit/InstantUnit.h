@@ -528,7 +528,7 @@ public:
     virtual bool IsPassed() const = 0;
 
     ///Indicate "Failed" mark for entire Test Case
-    virtual bool IsFailed() const = 0;
+    bool IsFailed() const { return !IsPassed(); }
 };
 
 
@@ -550,7 +550,7 @@ public:
     virtual bool IsPassed() const = 0;
 
     ///Indicate "Failed" mark for check
-    virtual bool IsFailed() const = 0;
+    bool IsFailed() const { return !IsPassed(); }
 
     ///Text representation of entire expression to be verified
     virtual std::string ExpresionText() const = 0;
@@ -598,7 +598,7 @@ public:
 
 //Progress reporting ----------------------------------------------------------
 
-///Report tests execution progress
+///Report tests execution stages/progress
 class Reporter{
 public:
     ///Called before the Test Session execution
@@ -704,7 +704,7 @@ namespace details{
 class TestCaseFailed{};
 
 
-///
+///Implement collecting time tracking statistics for continuous activity
 template<class Derived, class BaseToOverrideMethodsFrom>
 class ContinuousActivity: public BaseToOverrideMethodsFrom{
 public:
@@ -994,11 +994,6 @@ public:
         return isPassed;
     }
 
-    bool IsFailed() const override{
-        CheckIfReady("IsFailed");
-        return !isPassed;
-    }
-
     //
 
 private:
@@ -1067,6 +1062,22 @@ public:
         }
     }
 
+
+    //Ban copy
+    InstanceListBase(const InstanceListBase&) = delete;
+    InstanceListBase& operator=(InstanceListBase&) = delete;
+
+    //ban all dynamic allocation stuff
+    void* operator new(std::size_t) = delete;          // standard new
+    void* operator new(std::size_t, void*) = delete;   // placement new
+    void* operator new[](std::size_t) = delete;        // array new
+    void* operator new[](std::size_t, void*) = delete; // placement array new
+    //also ban corresponding deletes
+    void operator delete(void*) = delete;          // standard delete
+    void operator delete(void*, void*) = delete;   // placement delete
+    void operator delete[](void*) = delete;        // array delete
+    void operator delete[](void*, void*) = delete; // placement array delete
+
 protected:
     ///Add this item to the end of the list (preserve order)
     InstanceListBase() : next(nullptr) {
@@ -1083,12 +1094,6 @@ private:
 
     ///Pointer to the next known instance
     InstanceListBase* next;
-
-    //ban all dynamic allocation stuff
-    void* operator new(std::size_t);          // standard new
-    void* operator new(std::size_t, void*);   // placement new
-    void* operator new[](std::size_t);        // array new
-    void* operator new[](std::size_t, void*); // placement array new
 };
 
 template<class DerivedT>
@@ -1154,5 +1159,7 @@ int RunTets(int argc, char *argv[]){
 }
 
 } //namespace InstantUnit
+
+/*22469275616224 /22469275616224*/
 
 #endif /*INSTANTUNIT_HDR_*/
