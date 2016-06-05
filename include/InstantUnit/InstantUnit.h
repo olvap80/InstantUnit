@@ -532,14 +532,36 @@ public:
 };
 
 
-///
+///Information available before check statement is executed
+/** Check statements are any of EXPECT or ASSERT in any form
+    including comparisons and predicate/function calls.*/
 class ContextBeforeCheck{
 public:
     ///Access entire testing context (whole test or test case)
-    virtual const ContextBeforeTestCase& TestCase() const = 0;
+    virtual const ContextBeforeTestCase& ContainingTestCase() const = 0;
+
 
     ///
-    virtual std::string StepText() const = 0;
+    virtual unsigned Line() = 0;
+
+
+    ///Condition text as it is checked by InstantUnit
+    /** Variables and arguments names are pasted
+        as they are written in original condition,
+        only ASSERT and EXPECT words are removed.
+
+    Mapping from ASSERT statement to text
+    @code
+    | Statement to verify                   | Result of Text property       |
+    | ASSERT( expr )                        | expr                          |
+    | ASSERT( expr ) OP value               | expr OP value                 |
+    | ASSERT(fcn)()                         | fcn()                         |
+    | ASSERT(fcn)(arg)                      | fcn(arg)                      |
+    | ASSERT(fcn)(arg1,... argN)            | fcn(arg1,... argN)            |
+    | ASSERT(fcn)(arg1,... argN) OP value   | fcn(arg1,... argN) OP value   |
+    @endcode
+    for EXPECT mapping is similar*/
+    virtual std::string Text() const = 0;
 };
 
 
@@ -552,14 +574,14 @@ public:
     ///Indicate "Failed" mark for check
     bool IsFailed() const { return !IsPassed(); }
 
-    ///Text representation of entire expression to be verified
-    virtual std::string ExpresionText() const = 0;
+    ///Left hand side of the expression (as it is written)
+    virtual std::string LHS() const = 0;
+
+    ///Right hand side of the expression (as it is written)
+    virtual std::string RHS() const = 0;
 
     ///
-    virtual std::string ExpectedValue() const = 0;
-
-    ///
-    virtual std::string ActualValue() const = 0;
+    virtual std::string Operaton() const = 0;
 };
 
 /*
@@ -1012,6 +1034,9 @@ private:
     CodeToRunForTest codeToRun;
     bool isPassed = false;
 };
+
+
+
 
 
 class Context{};
