@@ -541,8 +541,11 @@ public:
     virtual const ContextBeforeTestCase& ContainingTestCase() const = 0;
 
 
-    ///
-    virtual unsigned Line() = 0;
+    ///File where corresponding check (EXPECT or ASSERT) is placed
+    virtual std::string File() const = 0;
+
+    ///Line where corresponding check (EXPECT or ASSERT) is placed
+    virtual unsigned Line() const = 0;
 
 
     ///Condition text as it is checked by InstantUnit
