@@ -3,7 +3,7 @@
 
 To use just include this header.
 There are no other dependencies then standard libraries,
-no installation needed, copy-paste of this single file will also work :)
+no installation needed, simple copy-paste of this single file will also work :)
 
 Simplest usage sample:
 
@@ -127,12 +127,12 @@ Here Test Suite is not only a collection of Test Cases but also a way
 to surround every Test Case in that collection with the Setup and Teardown code.
 
 Setup code from the Test Suite is executed before each Test Case like when
-it was pasted directly before the Test Case body.
+it was copy-pasted directly before the Test Case body.
 You can declare variables in Setup and
 they will be visible from the Test Case body.
 
 Teardown code from the Test Suite is executed after each Test Case like when
-it is pasted directly after the test case body.
+it is copy-pasted directly after the test case body.
 Teardown code is still automatically executed even in case of exception in
 a Test Case body.
 Every variable declared in the Setup code is visible from the Teardown code.
@@ -289,6 +289,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define EXPECT_CALL(...)
 
 
+//TODO: think if we really need that SANITY_ stuff
+
+/**The difference between SANITY_FOR_TEST and ASSERT if that
+   SANITY_FOR_TEST does not write anything to output for positive case */
 #define SANITY_FOR_TEST(condition) SANITY_FOR_TEST_CASE(condition)
 #define SANITY_FOR_TEST_CASE(condition)
 
@@ -397,6 +401,7 @@ namespace details{
 class CheckedActivity{
 public:
     ///Returns true when activity did not start
+    /** failed before start, failed while start etc...*/
     bool IsStartFailed() const { return !IsCompleted() && IsFailed(); }
 
     ///Return true if activity executed completely, false otherwise
@@ -617,7 +622,8 @@ public:
     ///Right hand side of the expression (as it is written)
     virtual std::string RHS() const = 0;
 
-    ///
+    ///Operation between LHS and RHS
+    /**Could be any on ==, !=, <. <=, >, >=*/
     virtual std::string Operaton() const = 0;
 };
 

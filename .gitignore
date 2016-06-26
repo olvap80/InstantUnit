@@ -1,6 +1,7 @@
 # IDE specific stuff
 *.layout
 *.depend
+*.cscope_file_list
 
 # Build results
 [Bb]in/
