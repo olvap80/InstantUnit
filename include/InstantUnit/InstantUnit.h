@@ -400,7 +400,7 @@ namespace details{
 ///
 class CheckedActivity{
 public:
-    ///Returns true when activity did not start
+    ///Returns true when activity failed to start
     /** failed before start, failed while start etc...*/
     bool IsStartFailed() const { return !IsCompleted() && IsFailed(); }
 
@@ -408,14 +408,6 @@ public:
     /** Having IsFailed() indicator true while IsCompleted() is false
         means activity failed to start (use IsStartFailed() API for that) */
     virtual bool IsCompleted() const = 0;
-
-    ///"Passed" indicator for entire activity
-    /** IsPassed() returns false at any time before activity completes.
-        IsPassed() returns true only when activity completed and passed
-
-        IsPassed() will be mutually exclusive
-        with IsFailed() only after activity completion*/
-    virtual bool IsPassed() const = 0;
 
     ///"Failed" indicator for entire activity
     /** IsFailed() returns false at any time before activity completes,
@@ -426,6 +418,16 @@ public:
         IsFailed() will be mutually exclusive
         with IsPassed only after activity completion*/
     virtual bool IsFailed() const = 0;
+
+    ///"Passed" indicator for entire activity
+    /** IsPassed() returns false at any time before activity completes.
+        IsPassed() returns true only when activity completed and passed
+
+        IsPassed() will be mutually exclusive
+        with IsFailed() only after activity completion*/
+    virtual bool IsPassed() const = 0;
+
+
 };
 
 ///Support information available before Test Session starts (before any testing)
@@ -439,7 +441,7 @@ public:
     ///test session start time point
     virtual std::chrono::system_clock::time_point StartTimePoint() const = 0;
 
-    ///test session start time point (steady time counting)
+    ///Test session start time point (steady time counting)
     /**Using monotonic clock that will never be adjusted,
        The time points of this clock cannot decrease as physical time
        moves forward.
@@ -666,6 +668,9 @@ public:
 ///Report tests execution stages/progress
 class Reporter{
 public:
+    virtual void OnFatalError(const char* what) = 0;
+
+
     ///Called before the Test Session execution
     virtual void OnItem(const ContextBeforeTestSession& context) = 0;
     ///Called after the Test Session has been executed
@@ -789,12 +794,14 @@ public:
 
     std::chrono::system_clock::time_point EndTimePoint() const override{
         checkIfStarted();
+        checkIfCompleted();
         static_cast<const Derived*>(this)->CheckIfReady("EndTimePoint");
         return endTimePoint;
     }
 
     std::chrono::steady_clock::time_point EndSteadyTimePoint() const override{
         checkIfStarted();
+        checkIfCompleted();
         static_cast<const Derived*>(this)->CheckIfReady("EndSteadyTimePoint");
         return endSteadyTimePoint;
     }
@@ -802,12 +809,14 @@ public:
 
     std::chrono::steady_clock::duration Duration() const override{
         checkIfStarted();
+        checkIfCompleted();
         static_cast<const Derived*>(this)->CheckIfReady("Duration");
         return activityDuration;
     }
 
     std::chrono::seconds::rep DurationSeconds() const override{
         checkIfStarted();
+        checkIfCompleted();
         static_cast<const Derived*>(this)->CheckIfReady("DurationSeconds");
         return std::chrono::duration_cast<std::chrono::seconds>(activityDuration).count();
     }
@@ -832,8 +841,15 @@ protected:
 
 private:
     bool started = false;
+    bool completed = false;
+
     void checkIfStarted() const {
         if( !started ){
+            //TODO: report error
+        }
+    }
+    void checkIfCompleted() const {
+        if( !completed ){
             //TODO: report error
         }
     }
