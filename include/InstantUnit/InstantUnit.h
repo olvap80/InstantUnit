@@ -418,8 +418,6 @@ public:
     virtual bool IsErrorOnStart() const = 0;
 };
 
-
-
 ///This context is ready after activity completed
 /** Known testing activities: TestSession, TestSuite, TestCase and Checker
     (Note: see corresponding contexts for details) */
@@ -434,7 +432,6 @@ public:
         For Checker "Passed" means corresponding condition is true.*/
     virtual bool IsPassed() const = 0;
 };
-
 
 
 ///This context is created before activity starts and starts measuring time
@@ -454,7 +451,6 @@ public:
        and is most suitable for measuring intervals.*/
     virtual std::chrono::steady_clock::time_point StartSteadyTimePoint() const = 0;
 };
-
 
 
 ///This context is ready after activity completed and has time measurements
@@ -495,7 +491,7 @@ public:
 
     ///Number of all test suites found in this test session
     /** Available before actual execution*/
-    virtual unsigned TestSuitesTotal() const = 0;
+    virtual unsigned TestSuitesFound() const = 0;
 };
 
 ///Support information available after Test Session completed (after all tests)
@@ -510,11 +506,11 @@ public:
     using TestSessionContextBefore::Name;
     using TestSessionContextBefore::StartTimePoint;
     using TestSessionContextBefore::StartSteadyTimePoint;
-    using TestSessionContextBefore::TestSuitesTotal;
+    using TestSessionContextBefore::TestSuitesFound;
 
 
     ///Total number of all test cases found in all test suites
-    virtual unsigned TestCasesTotal() const = 0;
+    virtual unsigned TestCasesExecuted() const = 0;
 
     ///Total number or test cases passed (though all test suites)
     virtual unsigned TestCasesPassed() const = 0;
@@ -561,7 +557,7 @@ public:
 
 
     ///Number of all test cases in this test suite
-    virtual unsigned TestCasesTotal() const = 0;
+    virtual unsigned TestCasesExecuted() const = 0;
 
     ///Number of all test cases passed in this test suite
     virtual unsigned TestCasesPassed() const = 0;
@@ -919,7 +915,7 @@ public:
         return testSessionName;
     }
 
-    virtual unsigned TestSuitesTotal() const override{
+    virtual unsigned TestSuitesFound() const override{
         //TODO:
         return 0;
     }
@@ -928,19 +924,19 @@ public:
     //override from TestSessionContextAfter
 
 
-    unsigned TestCasesTotal() const override{
-        CheckIfReady("TestCasesTotal");
-        return testCasesTotal;
+    unsigned TestCasesExecuted() const override{
+        CheckIfReady("TestCasesExecuted");
+        return testCasesTotalExecuted;
     }
 
     unsigned TestCasesPassed() const override{
         CheckIfReady("TestCasesPassed");
-        return testCasesPassed;
+        return testCasesTotalPassed;
     }
 
     unsigned TestCasesFailed() const override{
         CheckIfReady("TestCasesFailed");
-        return testCasesFailed;
+        return testCasesTotalFailed;
     }
 
 
@@ -948,15 +944,15 @@ public:
 
 
     void OnTestCaseStart(){
-        ++testCasesTotal;
+        ++testCasesTotalExecuted;
     }
 
     void OnTestCasePassed(){
-        ++testCasesPassed;
+        ++testCasesTotalPassed;
     }
 
     void OnTestCaseFailed(){
-        ++testCasesFailed;
+        ++testCasesTotalFailed;
     }
 
 
@@ -982,9 +978,9 @@ private:
 
     std::string testSessionName; ///<by default is derived from start time
 
-    unsigned testCasesTotal = 0;
-    unsigned testCasesPassed = 0;
-    unsigned testCasesFailed = 0;
+    unsigned testCasesTotalExecuted = 0;
+    unsigned testCasesTotalPassed = 0;
+    unsigned testCasesTotalFailed = 0;
 };
 
 
@@ -1014,9 +1010,9 @@ public:
 
     //override from TestSuiteContextAfter
 
-    unsigned TestCasesTotal() const override{
-        CheckIfReady("TestCasesTotal");
-        return testCasesTotal;
+    unsigned TestCasesExecuted() const override{
+        CheckIfReady("TestCasesExecuted");
+        return testCasesExecuted;
     }
 
     unsigned TestCasesPassed() const override{
@@ -1035,7 +1031,7 @@ public:
 
     void OnTestCaseStart(){
         parentTestSession.OnTestCaseStart();
-        ++testCasesTotal;
+        ++testCasesExecuted;
     }
 
     void OnTestCasePassed(){
@@ -1068,7 +1064,7 @@ private:
     std::string testSuiteName;
     FullContextForTestSession& parentTestSession;
 
-    unsigned testCasesTotal = 0;
+    unsigned testCasesExecuted = 0;
     unsigned testCasesPassed = 0;
     unsigned testCasesFailed = 0;
 };
