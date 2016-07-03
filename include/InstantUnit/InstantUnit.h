@@ -59,6 +59,7 @@ Note2: there is also a set of SANITY_* macro to ensure "critical conditions",
        that do not produce any test output when passed,
        see documentation below.
 
+
 You can write a condition to be checked directly inside the ASSERT
 or EXPECT macro:
 
@@ -175,7 +176,7 @@ Practical sample:
 @endcode
 
 Disclaimer: all samples here are just for illustration purposes and they are
-            not intended to demonstrate such techniques as 100% coverage, etc.
+            not intended to demonstrate such things as "100% coverage", etc.
 
                          * * *
 
@@ -243,7 +244,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     /*Test body will follow below*/ \
     void IU_CAT_ID(Test_,__LINE__)::DoTest()
 
-///Named group of Test Cases together to support common Setup/Teardown
+///Named group of Test Cases tied together to support common Setup/Teardown
 /**Place Test Setup at top, then Test Cases and then Teardown at bottom.
    See example above on how to use this stuff.*/
 #define TEST_SUITE(testSuiteNameString) \
@@ -257,25 +258,35 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /** Causes Test Case to complete immediately on "verify fail"
   (when corresponding condition fails),
   the rest of the failed test is skipped.
+
   Following usages are possible:
   @code
-    ASSERT(expression);                       //verify expression is not 0
+    ASSERT(expression);                       //verify expression is not 0 (not false)
     ASSERT(expression) == valueToCompareWith; //verify expression == valueToCompareWith
     ASSERT(expression) != valueToCompareWith; //verify expression != valueToCompareWith
     ASSERT(expression) <  valueToCompareWith; //verify expression <  valueToCompareWith
     ASSERT(expression) <= valueToCompareWith; //verify expression <= valueToCompareWith
     ASSERT(expression) >  valueToCompareWith; //verify expression >  valueToCompareWith
-    ASSERT(expression) >= valueToCompareWith; //verify expression)>= valueToCompareWith
+    ASSERT(expression) >= valueToCompareWith; //verify expression >= valueToCompareWith
   @endcode
+
+  It is also possible to call predicate or function using following syntax:
+  @code
+    ASSERT(f)(args);                       //verify f(args) is not 0 (not false)
+    ASSERT(f)(args) == valueToCompareWith; //verify f(args) == valueToCompareWith
+    ASSERT(f)(args) != valueToCompareWith; //verify f(args) != valueToCompareWith
+    ASSERT(f)(args) <  valueToCompareWith; //verify f(args) <  valueToCompareWith
+    ASSERT(f)(args) <= valueToCompareWith; //verify f(args) <= valueToCompareWith
+    ASSERT(f)(args) >  valueToCompareWith; //verify f(args) >  valueToCompareWith
+    ASSERT(f)(args) >= valueToCompareWith; //verify f(args) >= valueToCompareWith
+  @endcode
+
   Note1: only comparison operations are allowed
          and ASSERT(expression) always goes first.
   Note2: ASSERT can only be placed inside TEST or TEST_CASE */
 #define ASSERT(expression)
 //
 
-
-///Mark a function call as being subject to "assert test"
-#define ASSERT_CALL(...)
 
 
 ///Mark an expression as being subject of "expect test"
@@ -284,9 +295,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     Usage is similar to ASSERT from above */
 #define EXPECT(expression) \
     InstantUnit::
-
-///Mark a function call as being subject to "expect test"
-#define EXPECT_CALL(...)
 
 
 //TODO: think if we really need that SANITY_ stuff
@@ -298,21 +306,18 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define SANITY_FOR_TEST_SUITE
 
-/*
-once SANITY has failed this means for the InstantUnit that the host process
-is corrupted/broken or there is no sense to continue, and now no more tests can be executed
-in this process instance,  */
 
 ///Check for conditions that break/corrupt entire process on failure
 /** Intended to make "Fatal" check macro for "critical condition checks".
  Never goes to output for "passed" case and does not affect statistics.
- Failed SANITY check means entire test session is broken and cannot continue.
+ Failed SANITY check means entire test session is corrupted/broken
+ and cannot continue.
  Once SANITY failed, no more test can be executed in the process (exit process).
  Usage is similar to ASSERT and EXPECT from above.*/
 #define SANITY_FOR_TEST_SESSION()
 
 
-///Specify this macro to not define main manually
+///Use this macro in the code to not define main manually
 #define MAIN_RUN_TESTS \
     int main(int argc, char *argv[]) \
     { \
@@ -327,7 +332,7 @@ namespace InstantUnit{
 
 
 //=============================================================================
-//Predefined verifiers --------------------------------------------------------
+//Predefined verifiers (predicates) -------------------------------------------
 
 ///Test double values are equal with precission
 inline bool IsNear(double val1, double val2, double precission){
@@ -354,9 +359,10 @@ bool RunTests();
 
 
 ///Add command line support for running tests
-/** @returns EXIT_SUCCESS when all executed tests passed, EXIT_FAILURE otherwise
+/** @returns EXIT_SUCCESS when all executed tests passed, EXIT_FAILURE otherwise.
+
 TODO: describe command line options here (like those used to run part of tests)
-Sample usage
+Sample usage:
 @code
     #include "InstantUnit/InstantUnit.h"
     ...
@@ -366,6 +372,7 @@ Sample usage
         return InstantUnit::RunTests(argc, argv);
     }
 @endcode
+
 Note: one can use MAIN_RUN_TESTS instead of main that just redirects to RunTests
       (just place MAIN_RUN_TESTS to one of your project files)*/
 int RunTets(int argc, char *argv[]);
@@ -397,30 +404,36 @@ namespace details{
     class FullContextForTestCase;
 }
 
-///
+///This context is created before activity starts
+/** Known checked activities: TestSession, TestSuite, TestCase and Checker
+    (Note: see contexts for details) */
 class CheckedActivityContextBefore{
 public:
+
     ///Indicate when activity failed to start
     /** failed before start, failed while start etc...
-        CheckContextAfter will run content of this activity.*/
+        When StartupError Content of this activity will not execute and
+        there will be no corresponding CheckedActivityContextAfter*/
     virtual bool IsStartupError() const = 0;
 
 };
 
 
 
-///
+///This context is ready after activity completed
+/** Known checked activities: TestSession, TestSuite, TestCase and Checker
+    (Note: see contexts for details) */
 class CheckedActivityContextAfter{
 public:
+
     ///"Passed" indicator for entire activity
     /** @returns true only when activity completed and passed, false otherwise
 
         For TestSession "Passed" means all test suites passed.
         For TestSuite "Passed" means all test cases passed.
         For TestCase "Passed" means all checks passed.
-        For Check "Passed" means corresponding condition is true.*/
+        For Checker "Passed" means corresponding condition is true.*/
     virtual bool IsPassed() const = 0;
-
 
 };
 
@@ -571,7 +584,7 @@ public:
 ///Information available before check statement is executed
 /** Check statements are any of EXPECT or ASSERT in any form
     including comparisons and predicate/function calls.*/
-class CheckContextBefore{
+class CheckerContextBefore{
 public:
     ///Access entire testing context (whole test or test case)
     virtual const TestCaseContextBefore& ContainingTestCase() const = 0;
@@ -605,7 +618,7 @@ public:
 
 
 ///
-class CheckContextAfter: public CheckContextBefore{
+class CheckerContextAfter: public CheckerContextBefore{
 public:
     ///Indicate "Passed" mark for check
     virtual bool IsPassed() const = 0;
@@ -684,9 +697,9 @@ public:
     virtual void OnItem(const TestCaseContextAfter&  context) = 0;
 
     ///Called before each Check (ASSERT or EXPECT) execution
-    virtual void OnItem(const CheckContextBefore& context) = 0;
+    virtual void OnItem(const CheckerContextBefore& context) = 0;
     ///Called after each Check (ASSERT or EXPECT) has been executed
-    virtual void OnItem(const CheckContextAfter&  context) = 0;
+    virtual void OnItem(const CheckerContextAfter&  context) = 0;
 
     /*
     TODO: use "Replacement only occurrs for a function-like macro if the macro
