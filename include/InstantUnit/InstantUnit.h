@@ -437,7 +437,7 @@ public:
 ///This context is created before activity starts and starts measuring time
 /** Known time measured testing activities: TestSession, TestSuite
     (Note: see corresponding contexts for details) */
-class TimeMeasuredTestingActivityContextBefore/*: public TestingActivityContextBefore*/{
+class TimeMeasuredTestingActivityContextBefore: public TestingActivityContextBefore{
 public:
     ///This Testing Activity start time point
     virtual std::chrono::system_clock::time_point StartTimePoint() const = 0;
@@ -456,7 +456,7 @@ public:
 ///This context is ready after activity completed and has time measurements
 /** Known time measured testing activities: TestSession, TestSuite
     (Note: see corresponding contexts for details) */
-class TimeMeasuredTestingActivityContextAfter/*: public TestingActivityContextAfter*/{
+class TimeMeasuredTestingActivityContextAfter: public TestingActivityContextAfter{
 public:
     ///This Testing Activity end time point
     virtual std::chrono::system_clock::time_point EndTimePoint() const = 0;
@@ -570,7 +570,7 @@ public:
 ///Information available before test case execution starts
 /** Test case is an item in the Test Suite with set of checks.
     Note: both TEST and TEST_CASE macro map here.*/
-class TestCaseContextBefore{
+class TestCaseContextBefore: public TestingActivityContextBefore{
 public:
     ///Name used in corresponding TEST or TEST_CASE macro
     virtual std::string Name() const = 0;
@@ -582,25 +582,21 @@ public:
 ///Information available after test case has been executed
 /** Test case is an item in the Test Suite with set of checks.
     Note: both TEST and TEST_CASE macro map here. */
-class TestCaseContextAfter: protected TestCaseContextBefore{
+class TestCaseContextAfter: public TestingActivityContextAfter,
+                            protected TestCaseContextBefore
+{
 public:
     //All stuff from TestCaseContextBefore also available
     using TestCaseContextBefore::Name;
     using TestCaseContextBefore::ContainingTestSuite;
 
-
-    ///Indicate "Passed" mark for entire Test Case
-    virtual bool IsPassed() const = 0;
-
-    ///Indicate "Failed" mark for entire Test Case
-    bool IsFailed() const { return !IsPassed(); }
 };
 
 
 ///Information available before check statement is executed
 /** Check statements are any of EXPECT or ASSERT in any form
     including comparisons and predicate/function calls.*/
-class CheckerContextBefore{
+class CheckerContextBefore: public TestingActivityContextBefore{
 public:
     ///Access entire testing context (whole test or test case)
     virtual const TestCaseContextBefore& ContainingTestCase() const = 0;
@@ -634,7 +630,9 @@ public:
 
 
 ///
-class CheckerContextAfter: public CheckerContextBefore{
+class CheckerContextAfter:
+                            public CheckerContextBefore
+{
 public:
     ///Indicate "Passed" mark for check
     virtual bool IsPassed() const = 0;
@@ -909,6 +907,20 @@ public:
     ) : testSessionName(testSessionNameToUse) {}
 
 
+    //override from TestingActivityContextBefore
+
+    bool IsErrorOnStart() const override{
+        return true; //TODO:
+    }
+
+
+    //override from TestingActivityContextAfter
+
+    bool IsPassed() const override{
+        return false; //TODO:
+    }
+
+
     //override from TestSessionContextBefore
 
     std::string Name() const override{
@@ -995,6 +1007,20 @@ public:
     )
         :   testSuiteName(testSuiteNameToUse),
             parentTestSession(parentTestSessionUsed) {}
+
+
+    //override from TestingActivityContextBefore
+
+    bool IsErrorOnStart() const override{
+        return true; //TODO:
+    }
+
+
+    //override from TestingActivityContextAfter
+
+    bool IsPassed() const override{
+        return false; //TODO:
+    }
 
 
     //override from TestSuiteContextBefore
@@ -1086,6 +1112,22 @@ public:
             parentTestSuite(parentTestSuiteUsed),
             codeToRun(codeToRunForTest) {}
 
+
+    //override from TestingActivityContextBefore
+
+    bool IsErrorOnStart() const override{
+        return true; //TODO:
+    }
+
+
+    //override from TestingActivityContextAfter
+
+    bool IsPassed() const override{
+        CheckIfReady("IsPassed");
+        return isPassed;
+    }
+
+
     //override from TestCaseContextBefore
 
     std::string Name() const override{
@@ -1097,11 +1139,6 @@ public:
     }
 
     //override from TestCaseContextAfter
-
-    bool IsPassed() const override{
-        CheckIfReady("IsPassed");
-        return isPassed;
-    }
 
     //
 
