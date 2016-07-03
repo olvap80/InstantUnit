@@ -530,7 +530,7 @@ public:
    Teardown is executed after each test case.
    Note: those tests created with TEST macro (that do not share Setup or
          Teardown) are part of the "DEFAULT" Test Suite*/
-class TestSuiteContextBefore{
+class TestSuiteContextBefore: public TimeMeasuredTestingActivityContextBefore{
 public:
     ///Get name provided to corresponding TestSuite macro
     /**Note: all TEST macro go to "DEFAULT" Test Suite*/
@@ -547,11 +547,16 @@ public:
    Teardown is executed after each test case.
    Note: those tests created with TEST macro (that do not share Setup or
          Teardown) are part of the "DEFAULT" Test Session*/
-class TestSuiteContextAfter: protected TestSuiteContextBefore{
+class TestSuiteContextAfter:
+                             public TimeMeasuredTestingActivityContextAfter,
+                             protected TestSuiteContextBefore
+{
     friend class details::FullContextForTestCase;
 public:
     //All stuff from TestSuiteContextBefore also available
     using TestSuiteContextBefore::Name;
+    using TestSuiteContextBefore::StartTimePoint;
+    using TestSuiteContextBefore::StartSteadyTimePoint;
     using TestSuiteContextBefore::ContainingTestSession;
 
 
@@ -965,6 +970,7 @@ public:
     //TODO: collection of test suites ?
 private:
     friend class ContinuousActivity<FullContextForTestSession, TestSessionContextAfter>;
+
     ///Ensure "after" part is available
     void CheckIfReady(const char* calledFrom) const {
         if( !ready ){
@@ -983,7 +989,8 @@ private:
 
 
 ///Collect information available before/after Test Suite
-class FullContextForTestSuite: public TestSuiteContextAfter{
+class FullContextForTestSuite:
+    public ContinuousActivity<FullContextForTestSuite, TestSuiteContextAfter>{
 public:
     ///Create named TestSuite (package of test cases)
     FullContextForTestSuite(
@@ -1047,6 +1054,8 @@ public:
     }
 
 private:
+    friend ContinuousActivity<FullContextForTestSuite, TestSuiteContextAfter>;
+
     ///Ensure "after" part is available
     void CheckIfReady(const char* calledFrom) const {
         if( !ready ){
