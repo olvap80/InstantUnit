@@ -41,7 +41,7 @@ Here:
             registered by InstantUnit framework for execution.
 
     -ASSERT shall report failed condition and cause Test Case to complete
-            immediately when corresponding condition fails,
+            immediately if corresponding condition fails,
             so the rest of the failed Test Case is skipped.
 
     -EXPECT (in contrast) on failure shall just mark the surrounding Test Case
@@ -100,10 +100,11 @@ into the InstantUnit framework, but you can write your own:
     ...
 @endcode
 
-More complex approach: add shared common Setup and Teardown. Please notice how
-those Setup and Teardown are located - there is no need to inherit from any
-classes, override any functions, etc
-    - just write your statements according to the template below:
+More complex (but very useful) approach
+is to add shared common Setup and Teardown.
+Please notice how those Setup and Teardown are located:
+- there is no need to inherit from any classes, override any functions, etc
+- just write your statements according to the template below:
 
 @code
     TEST_SUITE("My Suite name"){ // ... __LINE__##_Run(NU::TestCaseRunner& NU_TestCaseRunner) {
