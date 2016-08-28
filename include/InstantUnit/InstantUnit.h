@@ -234,8 +234,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     Such test suite will be a part of the "DEFAULT" Test Suite*/
 #define TEST(testNameString) \
     /*Class to run test code in*/ \
-    class IU_CAT_ID(Test_,__LINE__): private InstantUnit::details::SimpleRunner{ \
-        /*Test code will go here, called automatically from SimpleRunner*/ \
+    class IU_CAT_ID(Test_,__LINE__): \
+        private InstantUnit::details::SimpleStandaloneTestRunner \
+    { \
+        /*Test code will go here, called automatically from SimpleStandaloneTestRunner*/ \
         virtual void DoTest() override; \
         \
         virtual const char* TestName() override { return testNameString; }\
@@ -1211,7 +1213,7 @@ public:
     template<class FcnToCallOnEachPtr>
     static void ForEachInstance(FcnToCallOnEachPtr fcn){
         for(CollectInstances* ptr = head; ptr != nullptr; ptr = ptr->next){
-            fcn((DerivedT*)ptr);
+            fcn(*static_cast<DerivedT*>(ptr));
         }
     }
 
@@ -1267,7 +1269,9 @@ private:
 
 ///Base class to be executed while running tests
 /** Collect those tests, that are part of the "DEFAULT" test suite*/
-class SimpleRunner: public CollectInstances<SimpleRunner>{
+class SimpleStandaloneTestRunner:
+    public CollectInstances<SimpleStandaloneTestRunner>
+{
 protected:
     ///Method called to do actual testing
     virtual void DoTest() = 0;
@@ -1279,7 +1283,7 @@ private:
     //see also http://stackoverflow.com/questions/23834845/c-lambda-friendship
     friend bool InstantUnit::RunTests();
 
-    ///Method to be runned for all found Runnable instances
+    ///Method to be run for all found Runnable instances
     bool Run(){
         try{
             DoTest();
@@ -1306,9 +1310,11 @@ inline bool RunTests()
     details::FullContextForTestSession fullContextForTestSession;
 
     bool allPassed = true;
-    details::CollectInstances<details::SimpleRunner>::ForEachInstance(
-        [&](details::SimpleRunner* ptr){
-            allPassed = allPassed && ptr->Run();
+    details::CollectInstances<
+        details::SimpleStandaloneTestRunner
+    >::ForEachInstance(
+        [&](details::SimpleStandaloneTestRunner& test){
+            allPassed = allPassed && test.Run();
         }
     );
 
