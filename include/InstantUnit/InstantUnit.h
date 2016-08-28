@@ -1267,6 +1267,9 @@ private:
     friend bool InstantUnit::RunTests();
 };*/
 
+
+
+
 ///Base class to be executed while running tests
 /** Collect those tests, that are part of the "DEFAULT" test suite*/
 class SimpleStandaloneTestRunner:
@@ -1279,6 +1282,53 @@ protected:
     ///Name for test being runned
     virtual const char* TestName()  = 0;
 
+    ///
+    void SetTestFaulureFlag(){
+        //TODO:
+    }
+
+    bool IsTestFailed(){
+        //TODO
+        return false;
+    }
+
+private:
+    //see also http://stackoverflow.com/questions/23834845/c-lambda-friendship
+    friend bool InstantUnit::RunTests();
+
+    ///Method to be run for all found Runnable instances
+    bool RunTest(){
+        try{
+            DoTest();
+            return IsTestFailed();
+        }
+        catch(const TestCaseFailed&){
+            //Report Test Case failed
+        }
+        catch(const std::exception& e){
+            //Report exception detected (and continue execution)
+        }
+        catch(...){
+            //Report unknown exception detected (and continue execution)
+        }
+        return false;
+    }
+
+};
+
+///Base class to be executed while running tests
+/** Collect those tests, that are part of the "DEFAULT" test suite*/
+class TestSuiteRunner:
+    public CollectInstances<TestSuiteRunner>
+{
+protected:
+    ///Method called to do actual testing
+    virtual void DoNextTest() = 0;
+
+    ///Name for Test Suite being runned
+    virtual const char* TestName()  = 0;
+
+
 private:
     //see also http://stackoverflow.com/questions/23834845/c-lambda-friendship
     friend bool InstantUnit::RunTests();
@@ -1286,7 +1336,7 @@ private:
     ///Method to be run for all found Runnable instances
     bool Run(){
         try{
-            DoTest();
+            DoNextTest();
             return true;
         }
         catch(const TestCaseFailed&){
@@ -1310,14 +1360,17 @@ inline bool RunTests()
     details::FullContextForTestSession fullContextForTestSession;
 
     bool allPassed = true;
+
+    //Run "DEFAULT" Test Suite first
     details::CollectInstances<
         details::SimpleStandaloneTestRunner
     >::ForEachInstance(
         [&](details::SimpleStandaloneTestRunner& test){
-            allPassed = allPassed && test.Run();
+            allPassed = allPassed && test.RunTest();
         }
     );
 
+    //
 
     return allPassed;
 }
