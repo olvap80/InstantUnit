@@ -231,7 +231,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ///Simple named Test (standalone Test Case without shared Setup/Teardown stuff)
 /** Place Test code in braces after TEST macro.
-    Such test suite will be a part of the "DEFAULT" Test Session*/
+    Such test suite will be a part of the "DEFAULT" Test Suite*/
 #define TEST(testNameString) \
     /*Class to run test code in*/ \
     class IU_CAT_ID(Test_,__LINE__): private InstantUnit::details::SimpleRunner{ \
@@ -354,7 +354,7 @@ inline bool IsBetween(T val, T fromInclusive, T toInclusive){
 //Running tests ---------------------------------------------------------------
 
 ///Execute all known Test Suites as part of the full Test Session
-/** Test Suites to be run also include DEFAULT Test Suite.
+/** Test Suites to be run also include "DEFAULT" Test Suite.
     @returns true when all executed tests passed, false otherwise */
 bool RunTests();
 
@@ -1196,26 +1196,29 @@ private:
     Reporter& reporter;
 };*/
 
-///Helper to create list of static/global object instances
+///Helper base to collect list of static/global object instances
 /**Every derived instance will be a part of the global list.
- Access to all instances via InstanceListBase<T>::ForEachInstance.
- Allocate derived instances as global/static variables only.*/
+ Each DerivedT has corresponding list of instances
+ (Note: DerivedT also can be a base for other classes)
+ Access to all DerivedT instances (and instances derived from DerivedT)
+ via CollectInstances<DerivedT>::ForEachInstance.
+ Allocate any derived instances as global/static variables only.*/
 template<class DerivedT>
-class InstanceListBase{
+class CollectInstances{
 public:
     ///Invoke callback for each known instance (in the order as they were added)
     /**Global list of all existing instances */
     template<class FcnToCallOnEachPtr>
     static void ForEachInstance(FcnToCallOnEachPtr fcn){
-        for(InstanceListBase* ptr = head; ptr != nullptr; ptr = ptr->next){
+        for(CollectInstances* ptr = head; ptr != nullptr; ptr = ptr->next){
             fcn((DerivedT*)ptr);
         }
     }
 
 
     //Ban copy
-    InstanceListBase(const InstanceListBase&) = delete;
-    InstanceListBase& operator=(InstanceListBase&) = delete;
+    CollectInstances(const CollectInstances&) = delete;
+    CollectInstances& operator=(CollectInstances&) = delete;
 
     //ban all dynamic allocation stuff
     void* operator new(std::size_t) = delete;          // standard new
@@ -1230,7 +1233,7 @@ public:
 
 protected:
     ///Add this item to the end of the list (preserve order)
-    InstanceListBase() : next(nullptr) {
+    CollectInstances() : next(nullptr) {
         *pointerToTailPtr = this; //this will be new end of list
         pointerToTailPtr = &this->next; //set up new tail to update next time
     }
@@ -1238,32 +1241,33 @@ protected:
 private:
     ///All known instances list head
     /**use simple pointer chain to prevent problems with initialization order*/
-    static InstanceListBase* head;
+    static CollectInstances* head;
     ///Remember current tail position here
-    static InstanceListBase* *pointerToTailPtr;
+    static CollectInstances* *pointerToTailPtr;
 
     ///Pointer to the next known instance
-    InstanceListBase* next;
+    CollectInstances* next;
 };
 
 template<class DerivedT>
-InstanceListBase<DerivedT>* InstanceListBase<DerivedT>::head = nullptr;
+CollectInstances<DerivedT>* CollectInstances<DerivedT>::head = nullptr;
 template<class DerivedT>
-InstanceListBase<DerivedT>* *InstanceListBase<DerivedT>::pointerToTailPtr = &InstanceListBase<DerivedT>::head;
+CollectInstances<DerivedT>* *CollectInstances<DerivedT>::pointerToTailPtr = &CollectInstances<DerivedT>::head;
 
 
 ///Base class for object to be executed while running tests
-class Runnable: public InstanceListBase<Runnable>{
+/*class Runnable: public CollectInstances<Runnable>{
 protected:
     ///Method to be runned for all found Runnable instances
     virtual bool Run() = 0;
 
 private:
     friend bool InstantUnit::RunTests();
-};
+};*/
 
 ///Base class to be executed while running tests
-class SimpleRunner: public Runnable{
+/** Collect those tests, that are part of the "DEFAULT" test suite*/
+class SimpleRunner: public CollectInstances<SimpleRunner>{
 protected:
     ///Method called to do actual testing
     virtual void DoTest() = 0;
@@ -1272,17 +1276,23 @@ protected:
     virtual const char* TestName()  = 0;
 
 private:
+    //see also http://stackoverflow.com/questions/23834845/c-lambda-friendship
+    friend bool InstantUnit::RunTests();
+
     ///Method to be runned for all found Runnable instances
-    virtual bool Run(){
+    bool Run(){
         try{
             DoTest();
             return true;
         }
         catch(const TestCaseFailed&){
+            //Report Test Case failed
         }
         catch(const std::exception& e){
+            //Report exception detected
         }
         catch(...){
+            //Report unknown exception detected
         }
         return false;
     }
@@ -1296,15 +1306,18 @@ inline bool RunTests()
     details::FullContextForTestSession fullContextForTestSession;
 
     bool allPassed = true;
-    details::InstanceListBase<details::Runnable>::ForEachInstance(
-        [&](details::Runnable* ptr){
+    details::CollectInstances<details::SimpleRunner>::ForEachInstance(
+        [&](details::SimpleRunner* ptr){
             allPassed = allPassed && ptr->Run();
         }
     );
+
+
     return allPassed;
 }
 
 int RunTets(int argc, char *argv[]){
+    //TODO invent and process command line options (like filtering, etc)
     return 0;
 }
 
