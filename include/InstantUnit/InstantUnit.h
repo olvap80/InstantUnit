@@ -240,7 +240,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         /*Test code will go here, called automatically from SimpleStandaloneTestRunner*/ \
         virtual void Runner_DoTest() override; \
         \
-        virtual const char* Runner_CurrentTestName() override \
+        virtual const char* Runner_CurrentTestName() const override \
             { return testNameString; } \
     }; \
     /*Corresponding static (!) instance to be part of the run*/ \
@@ -257,15 +257,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         private InstantUnit::details::TestSuiteRunner \
     { \
         /*Test code will go here, called automatically from SimpleStandaloneTestRunner*/ \
-        virtual void Runner_DoNextTest() override; \
+        virtual void Runner_DoNextTest(const Runner_OnTestCase& runner_OnTestCase) override; \
         \
-        virtual const char* Runner_CurrentTestSiuteName() override \
+        virtual const char* Runner_CurrentTestSiuteName() const override \
             { return testSuiteNameString; } \
     }; \
     /*Corresponding static (!) instance to be part of the run*/ \
     static IU_CAT_ID(TestSuite_,__LINE__) IU_CAT_ID(TestSuiteInstance_,__LINE__); \
     /*Test Suite body will follow below*/ \
-    void IU_CAT_ID(TestSuite_,__LINE__)::Runner_DoNextTest()
+    void IU_CAT_ID(TestSuite_,__LINE__)::Runner_DoNextTest(const Runner_OnTestCase& runner_OnTestCase)
 
 ///Single Test Case item in the Test Suite (share Setup/Teardown with others)
 #define TEST_CASE(testCaseNameString)
@@ -559,7 +559,7 @@ public:
 
 ///Information available after Test Suite has been executed
 /**Test Suite is a container for Test Cases with shared Setup/Teardown
-   Setup is executed before each test case.
+   Setup is executed before each Test Case.
    Teardown is executed after each test case.
    Note: those tests created with TEST macro (that do not share Setup or
          Teardown) are part of the "DEFAULT" Test Session*/
@@ -576,6 +576,13 @@ public:
     using TestSuiteContextBefore::ContainingTestSession;
 
 
+    ///File where corresponding Test Suite is placed
+    //virtual std::string File() const = 0;
+
+    ///Line where corresponding Test Suite is placed
+    //virtual unsigned Line() const = 0;
+
+
     ///Number of all test cases in this test suite
     virtual unsigned TestCasesExecuted() const = 0;
 
@@ -587,13 +594,19 @@ public:
 };
 
 
-///Information available before test case execution starts
-/** Test case is an item in the Test Suite with set of checks.
+///Information available before Test Case execution starts
+/** Test Case is an item in the Test Suite with set of checks.
     Note: both TEST and TEST_CASE macro map here.*/
 class TestCaseContextBefore: public TestingActivityContextBefore{
 public:
     ///Access to containing Test Suite
     virtual const TestSuiteContextBefore& ContainingTestSuite() const = 0;
+
+    ///File where corresponding Test Suite is placed
+    //virtual std::string File() const = 0;
+
+    ///Line where corresponding Test Suite is placed
+    //virtual unsigned Line() const = 0;
 };
 
 ///Information available after test case has been executed
@@ -1290,11 +1303,13 @@ class SimpleStandaloneTestRunner:
     public CollectInstances<SimpleStandaloneTestRunner>
 {
 protected:
+
     ///Method called to do actual testing
     virtual void Runner_DoTest() = 0;
 
     ///Name for test being runned
-    virtual const char* Runner_CurrentTestName() = 0;
+    virtual const char* Runner_CurrentTestName() const = 0;
+
 
 /*
     ///
@@ -1337,11 +1352,21 @@ class TestSuiteRunner:
     public CollectInstances<TestSuiteRunner>
 {
 protected:
+
+    ///
+    typedef std::function<
+                void(
+                    const char* fileName, unsigned lineNumber,
+                    const char* testCaseName,
+                    const std::function<void()>& testCaseBody
+                )
+            > Runner_OnTestCase;
+
     ///Method called to do actual testing
-    virtual void Runner_DoNextTest() = 0;
+    virtual void Runner_DoNextTest(const Runner_OnTestCase& runner_OnTestCase) = 0;
 
     ///Name for Test Suite being runned
-    virtual const char* Runner_CurrentTestSiuteName() = 0;
+    virtual const char* Runner_CurrentTestSiuteName() const = 0;
 
 
 private:
@@ -1351,7 +1376,13 @@ private:
     ///Method to be run for all found Runnable instances
     bool RunTestSuite(){
         try{
-            Runner_DoNextTest();
+            Runner_DoNextTest(
+                [] (
+                    const char* fileName, unsigned lineNumber,
+                    const char* testCaseName,
+                    const std::function<void()>& testCaseBody
+                ) {}
+            );
             return true;
         }
         catch(const TestCaseFailed&){
