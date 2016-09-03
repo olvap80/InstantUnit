@@ -238,14 +238,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         private InstantUnit::details::SimpleStandaloneTestRunner \
     { \
         /*Test code will go here, called automatically from SimpleStandaloneTestRunner*/ \
-        virtual void DoTest() override; \
+        virtual void Runner_DoTest() override; \
         \
-        virtual const char* CurrentTestName() override { return testNameString; }\
+        virtual const char* Runner_CurrentTestName() override \
+            { return testNameString; } \
     }; \
     /*Corresponding static (!) instance to be part of the run*/ \
     static IU_CAT_ID(Test_,__LINE__) IU_CAT_ID(TestInstance_,__LINE__); \
     /*Test body will follow below*/ \
-    void IU_CAT_ID(Test_,__LINE__)::DoTest()
+    void IU_CAT_ID(Test_,__LINE__)::Runner_DoTest()
 
 ///Named group of Test Cases tied together to support common Setup/Teardown
 /**Place Test Setup at top, then Test Cases and then Teardown at bottom.
@@ -256,14 +257,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         private InstantUnit::details::TestSuiteRunner \
     { \
         /*Test code will go here, called automatically from SimpleStandaloneTestRunner*/ \
-        virtual void DoNextTest() override; \
+        virtual void Runner_DoNextTest() override; \
         \
-        virtual const char* CurrentTestSiuteName() override { return testSuiteNameString; }\
+        virtual const char* Runner_CurrentTestSiuteName() override \
+            { return testSuiteNameString; } \
     }; \
     /*Corresponding static (!) instance to be part of the run*/ \
     static IU_CAT_ID(TestSuite_,__LINE__) IU_CAT_ID(TestSuiteInstance_,__LINE__); \
     /*Test Suite body will follow below*/ \
-    void IU_CAT_ID(TestSuite_,__LINE__)::DoNextTest()
+    void IU_CAT_ID(TestSuite_,__LINE__)::Runner_DoNextTest()
 
 ///Single Test Case item in the Test Suite (share Setup/Teardown with others)
 #define TEST_CASE(testCaseNameString)
@@ -1289,11 +1291,12 @@ class SimpleStandaloneTestRunner:
 {
 protected:
     ///Method called to do actual testing
-    virtual void DoTest() = 0;
+    virtual void Runner_DoTest() = 0;
 
     ///Name for test being runned
-    virtual const char* CurrentTestName() = 0;
+    virtual const char* Runner_CurrentTestName() = 0;
 
+/*
     ///
     void SetTestFaulureFlag(){
         //TODO:
@@ -1302,7 +1305,7 @@ protected:
     bool IsTestFailed(){
         //TODO
         return false;
-    }
+    }*/
 
 private:
     //see also http://stackoverflow.com/questions/23834845/c-lambda-friendship
@@ -1311,8 +1314,8 @@ private:
     ///Method to be run for all found Runnable instances
     bool RunTest(){
         try{
-            DoTest();
-            return IsTestFailed();
+            Runner_DoTest();
+            return false;//IsTestFailed();
         }
         catch(const TestCaseFailed&){
             //Report Test Case failed
@@ -1335,10 +1338,10 @@ class TestSuiteRunner:
 {
 protected:
     ///Method called to do actual testing
-    virtual void DoNextTest() = 0;
+    virtual void Runner_DoNextTest() = 0;
 
     ///Name for Test Suite being runned
-    virtual const char* CurrentTestSiuteName() = 0;
+    virtual const char* Runner_CurrentTestSiuteName() = 0;
 
 
 private:
@@ -1348,7 +1351,7 @@ private:
     ///Method to be run for all found Runnable instances
     bool RunTestSuite(){
         try{
-            DoNextTest();
+            Runner_DoNextTest();
             return true;
         }
         catch(const TestCaseFailed&){
