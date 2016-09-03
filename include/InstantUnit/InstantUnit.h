@@ -240,10 +240,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         /*Test code will go here, called automatically from SimpleStandaloneTestRunner*/ \
         virtual void DoTest() override; \
         \
-        virtual const char* TestName() override { return testNameString; }\
+        virtual const char* CurrentTestName() override { return testNameString; }\
     }; \
     /*Corresponding static (!) instance to be part of the run*/ \
-    static IU_CAT_ID(Test_,__LINE__) IU_CAT_ID(Instance_,__LINE__); \
+    static IU_CAT_ID(Test_,__LINE__) IU_CAT_ID(TestInstance_,__LINE__); \
     /*Test body will follow below*/ \
     void IU_CAT_ID(Test_,__LINE__)::DoTest()
 
@@ -251,7 +251,19 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /**Place Test Setup at top, then Test Cases and then Teardown at bottom.
    See example above on how to use this stuff.*/
 #define TEST_SUITE(testSuiteNameString) \
-    TEST(testNameString) TODO
+    /*Class to run contained test cases in*/ \
+    class IU_CAT_ID(TestSuite_,__LINE__): \
+        private InstantUnit::details::TestSuiteRunner \
+    { \
+        /*Test code will go here, called automatically from SimpleStandaloneTestRunner*/ \
+        virtual void DoNextTest() override; \
+        \
+        virtual const char* CurrentTestSiuteName() override { return testSuiteNameString; }\
+    }; \
+    /*Corresponding static (!) instance to be part of the run*/ \
+    static IU_CAT_ID(TestSuite_,__LINE__) IU_CAT_ID(TestSuiteInstance_,__LINE__); \
+    /*Test Suite body will follow below*/ \
+    void IU_CAT_ID(TestSuite_,__LINE__)::DoNextTest()
 
 ///Single Test Case item in the Test Suite (share Setup/Teardown with others)
 #define TEST_CASE(testCaseNameString)
@@ -1280,7 +1292,7 @@ protected:
     virtual void DoTest() = 0;
 
     ///Name for test being runned
-    virtual const char* TestName()  = 0;
+    virtual const char* CurrentTestName() = 0;
 
     ///
     void SetTestFaulureFlag(){
@@ -1326,7 +1338,7 @@ protected:
     virtual void DoNextTest() = 0;
 
     ///Name for Test Suite being runned
-    virtual const char* TestName()  = 0;
+    virtual const char* CurrentTestSiuteName() = 0;
 
 
 private:
@@ -1334,7 +1346,7 @@ private:
     friend bool InstantUnit::RunTests();
 
     ///Method to be run for all found Runnable instances
-    bool Run(){
+    bool RunTestSuite(){
         try{
             DoNextTest();
             return true;
@@ -1366,11 +1378,18 @@ inline bool RunTests()
         details::SimpleStandaloneTestRunner
     >::ForEachInstance(
         [&](details::SimpleStandaloneTestRunner& test){
-            allPassed = allPassed && test.RunTest();
+            allPassed = test.RunTest() && allPassed;
         }
     );
 
-    //
+    //Run other Test Suites available
+    details::CollectInstances<
+        details::TestSuiteRunner
+    >::ForEachInstance(
+        [&](details::TestSuiteRunner& test){
+            allPassed = test.RunTestSuite() && allPassed;
+        }
+    );
 
     return allPassed;
 }
