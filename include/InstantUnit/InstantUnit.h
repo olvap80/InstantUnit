@@ -823,8 +823,13 @@ namespace InstantUnit{
 
 namespace details{
 
-///Exception to be used to signal that test case failed
-class TestCaseFailed{};
+///Exception to be used to signal that Test Case failed
+class AssertCheckFailed{};
+///Exception to be used to signal that Sanity Check failed
+class SanityCheckFailed{};
+
+///Helper to unwind failed Test Case but continue Test Suite execution
+class UnwindAndContinueTestSuite{};
 
 
 ///Implement collecting time tracking statistics for continuous activity
@@ -1343,7 +1348,7 @@ private:
             Runner_DoTest();
             return false;//IsTestFailed();
         }
-        catch(const TestCaseFailed&){
+        catch(const AssertCheckFailed&){
             //Report Test Case failed
         }
         catch(const std::exception& e){
@@ -1392,18 +1397,48 @@ private:
                     const char* fileName, unsigned lineNumber,
                     const char* testCaseName,
                     const std::function<void()>& testCaseBody
-                ) {}
+                ) {
+                    //This code is executed after setup and before teardown
+                    try{
+                        testCaseBody();
+                    }
+                    catch(const AssertCheckFailed&){
+                        //Assert failed inside test case
+                        //TODO: report failure
+                        throw UnwindAndContinueTestSuite();
+                    }
+                    catch(const SanityCheckFailed&){
+                        //Sanity failed inside test case
+                        //TODO: report failure
+                        throw UnwindAndContinueTestSuite();
+                    }
+                    catch(const std::exception& e){
+                        //Report exception is detected at Test Case level
+
+                        //TODO: report no way to continue such Test Suite
+                    }
+                    catch(...){
+                        //Report unknown exception detected at Test Case level
+                    }
+                }
             );
             return true;
         }
-        catch(const TestCaseFailed&){
-            //Report Test Case failed
+        catch(const AssertCheckFailed&){
+            //That was ASSERT not included in any Test Case (wrong usage)
+        }
+        catch(const SanityCheckFailed&){
+            //That was SANITY at Test Suite level (in setup or teardown)
+
+            //TODO: report no way to continue such Test Suite
         }
         catch(const std::exception& e){
-            //Report exception detected
+            //Report exception is detected at Test Suite level
+
+            //TODO: report no way to continue such Test Suite
         }
         catch(...){
-            //Report unknown exception detected
+            //Report unknown exception detected at Test Suite level
         }
         return false;
     }
