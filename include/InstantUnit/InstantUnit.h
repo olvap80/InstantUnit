@@ -223,6 +223,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <chrono>
 #include <functional>
+#include <type_traits>
 
 
 //#############################################################################
@@ -1225,29 +1226,39 @@ private:
     Reporter& reporter;
 };*/
 
-///Helper base to collect list of static/global object instances
-/**Every derived instance will be a part of the global list.
- Each DerivedT has corresponding list of instances
- (Note: DerivedT also can be a base for other classes)
- Access to all DerivedT instances (and instances derived from DerivedT)
- via CollectInstances<DerivedT>::ForEachInstance.
+///Helper base to collect list of static/global class instances
+/**Every derived instance of type DerivedT will be a part of the global list.
+ For each DerivedT we have own corresponding list of instances.
+ (Note: DerivedT also can be a base for other classes).
+ Access to all DerivedT instances (and all instances derived from DerivedT)
+ via CollectInstancesOf<DerivedT>::ForEachInstance method.
  Allocate any derived instances as global/static variables only.*/
 template<class DerivedT>
-class CollectInstances{
+class CollectInstancesOf{
 public:
     ///Invoke callback for each known instance (in the order as they were added)
-    /**Global list of all existing instances */
+    /**Global list of all existing instances is readly
+       only after corresponding instances were initialized.
+       You will not see here those that are placed in functions,
+       so do not use "Mayers singleton" trick with derived objects.*/
     template<class FcnToCallOnEachPtr>
     static void ForEachInstance(FcnToCallOnEachPtr fcn){
-        for(CollectInstances* ptr = head; ptr != nullptr; ptr = ptr->next){
+        //Ensure one uses CollectInstancesOf in right way
+        static_assert(
+            std::is_base_of< CollectInstancesOf, DerivedT >::value,
+            "DerivedT is listed in CollectInstancesOf"
+            " only when CollectInstancesOf<DerivedT> is base class for DerivedT"
+        );
+
+        for(CollectInstancesOf* ptr = head; ptr != nullptr; ptr = ptr->next){
             fcn(*static_cast<DerivedT*>(ptr));
         }
     }
 
 
     //Ban copy
-    CollectInstances(const CollectInstances&) = delete;
-    CollectInstances& operator=(CollectInstances&) = delete;
+    CollectInstancesOf(const CollectInstancesOf&) = delete;
+    CollectInstancesOf& operator=(CollectInstancesOf&) = delete;
 
     //ban all dynamic allocation stuff
     void* operator new(std::size_t) = delete;          // standard new
@@ -1262,7 +1273,7 @@ public:
 
 protected:
     ///Add this item to the end of the list (preserve order)
-    CollectInstances() : next(nullptr) {
+    CollectInstancesOf() : next(nullptr) {
         *pointerToTailPtr = this; //this will be new end of list
         pointerToTailPtr = &this->next; //set up new tail to update next time
     }
@@ -1270,22 +1281,22 @@ protected:
 private:
     ///All known instances list head
     /**use simple pointer chain to prevent problems with initialization order*/
-    static CollectInstances* head;
-    ///Remember current tail position here
-    static CollectInstances* *pointerToTailPtr;
+    static CollectInstancesOf* head;
+    ///Remember current list tail position here
+    static CollectInstancesOf* *pointerToTailPtr;
 
     ///Pointer to the next known instance
-    CollectInstances* next;
+    CollectInstancesOf* next;
 };
 
 template<class DerivedT>
-CollectInstances<DerivedT>* CollectInstances<DerivedT>::head = nullptr;
+CollectInstancesOf<DerivedT>* CollectInstancesOf<DerivedT>::head = nullptr;
 template<class DerivedT>
-CollectInstances<DerivedT>* *CollectInstances<DerivedT>::pointerToTailPtr = &CollectInstances<DerivedT>::head;
+CollectInstancesOf<DerivedT>* *CollectInstancesOf<DerivedT>::pointerToTailPtr = &CollectInstancesOf<DerivedT>::head;
 
 
 ///Base class for object to be executed while running tests
-/*class Runnable: public CollectInstances<Runnable>{
+/*class Runnable: public CollectInstancesOf<Runnable>{
 protected:
     ///Method to be runned for all found Runnable instances
     virtual bool Run() = 0;
@@ -1300,7 +1311,7 @@ private:
 ///Base class to be executed while running tests
 /** Collect those tests, that are part of the "DEFAULT" test suite*/
 class SimpleStandaloneTestRunner:
-    public CollectInstances<SimpleStandaloneTestRunner>
+    public CollectInstancesOf<SimpleStandaloneTestRunner>
 {
 protected:
 
@@ -1349,7 +1360,7 @@ private:
 ///Base class to be executed while running tests
 /** Collect those tests, that are part of the "DEFAULT" test suite*/
 class TestSuiteRunner:
-    public CollectInstances<TestSuiteRunner>
+    public CollectInstancesOf<TestSuiteRunner>
 {
 protected:
 
@@ -1408,7 +1419,7 @@ inline bool RunTests()
     bool allPassed = true;
 
     //Run "DEFAULT" Test Suite first
-    details::CollectInstances<
+    details::CollectInstancesOf<
         details::SimpleStandaloneTestRunner
     >::ForEachInstance(
         [&](details::SimpleStandaloneTestRunner& test){
@@ -1417,7 +1428,7 @@ inline bool RunTests()
     );
 
     //Run other Test Suites available
-    details::CollectInstances<
+    details::CollectInstancesOf<
         details::TestSuiteRunner
     >::ForEachInstance(
         [&](details::TestSuiteRunner& test){
