@@ -224,6 +224,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <chrono>
 #include <functional>
 #include <type_traits>
+#include <set>
 
 
 //#############################################################################
@@ -1369,7 +1370,7 @@ class TestSuiteRunner:
 {
 protected:
 
-    ///
+    ///Called by TEST_CASE macro inside Runner_DoNextTest
     typedef std::function<
                 void(
                     const char* fileName, unsigned lineNumber,
@@ -1378,8 +1379,10 @@ protected:
                 )
             > Runner_OnTestCase;
 
-    ///Method called to do actual testing
-    virtual void Runner_DoNextTest(const Runner_OnTestCase& runner_OnTestCase) = 0;
+    ///Method called to do actual testing (invoke test cases)
+    virtual void Runner_DoNextTest(
+        const Runner_OnTestCase& runner_OnTestCase ///<
+    ) = 0;
 
     ///Name for Test Suite being runned
     virtual const char* Runner_CurrentTestSiuteName() const = 0;
@@ -1389,56 +1392,69 @@ private:
     //see also http://stackoverflow.com/questions/23834845/c-lambda-friendship
     friend bool InstantUnit::RunTests();
 
+
     ///Method to be run for all found Runnable instances
     bool RunTestSuite(){
-        try{
-            Runner_DoNextTest(
-                [] (
-                    const char* fileName, unsigned lineNumber,
-                    const char* testCaseName,
-                    const std::function<void()>& testCaseBody
-                ) {
-                    //This code is executed after setup and before teardown
-                    try{
-                        testCaseBody();
-                    }
-                    catch(const AssertCheckFailed&){
-                        //Assert failed inside test case
-                        //TODO: report failure
-                        throw UnwindAndContinueTestSuite();
-                    }
-                    catch(const SanityCheckFailed&){
-                        //Sanity failed inside test case
-                        //TODO: report failure
-                        throw UnwindAndContinueTestSuite();
-                    }
-                    catch(const std::exception& e){
-                        //Report exception is detected at Test Case level
+        bool isFirstRun = true;
+        bool totalTestCases = 0;
 
-                        //TODO: report no way to continue such Test Suite
-                    }
-                    catch(...){
-                        //Report unknown exception detected at Test Case level
-                    }
-                }
-            );
-            return true;
-        }
-        catch(const AssertCheckFailed&){
-            //That was ASSERT not included in any Test Case (wrong usage)
-        }
-        catch(const SanityCheckFailed&){
-            //That was SANITY at Test Suite level (in setup or teardown)
+        //all test casesin the test suite shall be in the same file
+        std::string sameFileNameForTCSanityCheck;
+        //track line numbers of test cases to prevent same TC from being executed several times
+        std::set<unsigned> executedLineNumbersForSanityCheck;
 
-            //TODO: report no way to continue such Test Suite
-        }
-        catch(const std::exception& e){
-            //Report exception is detected at Test Suite level
+        /*Call Runner_DoNextTest number of times to execute each nested TC
+          (Note: each time different TC is executed) */
+        for(;;){
+            try{
+                Runner_DoNextTest(
+                    [&] (
+                        const char* fileName, unsigned lineNumber,
+                        const char* testCaseName,
+                        const std::function<void()>& testCaseBody
+                    ){
+                        //This code is executed after setup and before teardown
+                        try{
+                            testCaseBody();
+                        }
+                        catch(const AssertCheckFailed&){
+                            //Assert failed inside test case
+                            //TODO: report failure
+                            throw UnwindAndContinueTestSuite();
+                        }
+                        catch(const SanityCheckFailed&){
+                            //Sanity failed inside test case
+                            //TODO: report failure
+                            throw UnwindAndContinueTestSuite();
+                        }
+                        catch(const std::exception& e){
+                            //Report exception is detected at Test Case level
 
-            //TODO: report no way to continue such Test Suite
-        }
-        catch(...){
-            //Report unknown exception detected at Test Suite level
+                            //TODO: report no way to continue such Test Suite
+                        }
+                        catch(...){
+                            //Report unknown exception detected at Test Case level
+                        }
+                    }
+                );
+                return true;
+            }
+            catch(const AssertCheckFailed&){
+                //That was ASSERT not included in any Test Case (wrong usage)
+            }
+            catch(const SanityCheckFailed&){
+                //That was SANITY at Test Suite level (in setup or teardown)
+
+                //TODO: report no way to continue such Test Suite
+            }
+            catch(const std::exception& e){
+                //Report exception is detected at Test Suite level
+
+                //TODO: report no way to continue such Test Suite
+            }
+            catch(...){
+                //Report unknown exception detected at Test Suite level
+            }
         }
         return false;
     }
