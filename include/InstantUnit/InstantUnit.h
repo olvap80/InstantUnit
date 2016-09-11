@@ -241,7 +241,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         private InstantUnit::details::SimpleStandaloneTestRunner \
     { \
         /*Test code will go here, called automatically from SimpleStandaloneTestRunner*/ \
-        virtual void Runner_DoTest() override; \
+        virtual void Runner_DoTest(bool& allAssertsAndExpectsPassedFlag) override; \
         \
         virtual const char* Runner_CurrentTestName() const override \
             { return testNameString; } \
@@ -249,7 +249,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     /*Corresponding static (!) instance to be part of the run*/ \
     static IU_CAT_ID(Test_,__LINE__) IU_CAT_ID(TestInstance_,__LINE__); \
     /*Test body will follow below*/ \
-    void IU_CAT_ID(Test_,__LINE__)::Runner_DoTest()
+    void IU_CAT_ID(Test_,__LINE__)::Runner_DoTest(bool& allAssertsAndExpectsPassedFlag)
 
 ///Named group of Test Cases tied together to support common Setup/Teardown
 /**Place Test Setup at top, then Test Cases and then Teardown at bottom.
@@ -1316,10 +1316,13 @@ private:
 
 
 ///Execute single Test Case, return true on TC success, false on TC failure
-bool RunTestCase(const std::function<void()>& tcBody){
+bool RunTestCase(
+    const std::function<void(bool& allAssertsAndExpectsPassedFlag)>& tcBody
+){
     try{
-        tcBody();
-        return true;
+        bool allAssertsAndExpectsPassedFlag = true;
+        tcBody(allAssertsAndExpectsPassedFlag);
+        return allAssertsAndExpectsPassedFlag;
     }
     catch(const AssertCheckFailed&){
         //Assert failed inside Test Case
@@ -1349,7 +1352,7 @@ class SimpleStandaloneTestRunner:
 protected:
 
     ///Method called to do actual testing
-    virtual void Runner_DoTest() = 0;
+    virtual void Runner_DoTest(bool& allAssertsAndExpectsPassedFlag) = 0;
 
     ///Name for test being runned
     virtual const char* Runner_CurrentTestName() const = 0;
@@ -1373,7 +1376,10 @@ private:
     ///Method to be run for all found Runnable instances
     /**\returns true on TC success, false on TC failure*/
     bool RunTest(){
-        return RunTestCase( [&]() { Runner_DoTest(); } );
+        return RunTestCase(
+            [&](bool& allExpectsAlsoPassedFlag)
+                { Runner_DoTest(allExpectsAlsoPassedFlag); }
+        );
     }
 
 };
@@ -1390,7 +1396,9 @@ protected:
                 void(
                     const char* fileName, unsigned lineNumber,
                     const char* testCaseName,
-                    const std::function<void()>& testCaseBody
+                    const std::function<
+                        void(bool& allExpectsAlsoPassedFlag)
+                    >& testCaseBody
                 )
             > Runner_OnTestCase;
 
@@ -1413,13 +1421,15 @@ private:
     bool RunTestSuite(){
         bool allNestedTCSucceeded = true;
 
+        //current Test Suite execution state
         enum{
             StateJustStartedRunFirstTC,
             StateCollectOtherTCInformation,
             StateRunRestOfTC,
             StateCompleted
         } state;
-        bool totalTestCases = 0;
+
+        bool totalTestCasesFound = 0;
 
         //all test casesin the test suite shall be in the same file
         std::string sameFileNameForTCSanityCheck;
@@ -1435,7 +1445,9 @@ private:
                     [&] (
                         const char* fileName, unsigned lineNumber,
                         const char* testCaseName,
-                        const std::function<void()>& testCaseBody
+                        const std::function<
+                            void(bool& allExpectsAlsoPassedFlag)
+                        >& testCaseBody
                     ){
                         //This code is executed after setup and before teardown
 
@@ -1447,6 +1459,7 @@ private:
                 );
 
                 allNestedTCSucceeded = testCaseResult && allNestedTCSucceeded;
+
 
                 continue;
             }

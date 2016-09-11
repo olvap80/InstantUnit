@@ -24,7 +24,7 @@ TEST_SUITE("Test Suite 1")
 {
     std::cout << "InstantUnit 333" << std::endl;
 
-    runner_OnTestCase(__FILE__, __LINE__, "test name", [](){
+    runner_OnTestCase(__FILE__, __LINE__, "test name", [](bool& allAssertsAndExpectsPassedFlag){
         std::cout << "InstantUnit 444" << std::endl;
     });
 }
