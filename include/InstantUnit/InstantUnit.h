@@ -1110,46 +1110,59 @@ public:
             > GetNextTestCaseExecutorFunction;
 
 
-    bool OnNextTestCase(const TestCaseExecutorFunction& executeNextTestCase){
-        onTestCaseStart();
+    bool OnNextTestCase(
+        const GetNextTestCaseExecutorFunction& getNextTestCaseExecutorFunction
+    ){
+        bool allNestedTCSucceeded = true;
 
-        bool testCaseExecutionResult = false;
-
-        try{
-            testCaseExecutionResult = executeNextTestCase();
-        }
-        catch(const AssertCheckFailed&){
-            //That was ASSERT not included in any Test Case (report wrong usage)
-        }
-        catch(const SanityCheckFailed&){
-            //That was SANITY at Test Suite level (in setup or teardown)
-
-            //TODO: report no way to continue such Test Suite
-        }
-        catch(const std::exception& e){
-            //Report exception is detected at Test Suite level
-
-            //TODO: report no way to continue such Test Suite
-        }
-        catch(...){
-            //Report unknown exception detected at Test Suite level
-        }
+        for(;;){
+            TestCaseExecutorFunction
+                executeNextTestCase = getNextTestCaseExecutorFunction();
+            if( !executeNextTestCase ){
+                break;
+            }
 
 
-        if( testCaseExecutionResult  ){
-            onTestCasePassed();
-        }
-        else{
-            onTestCaseFailed();
-        }
+            onTestCaseStart();
 
-        return testCaseExecutionResult;
+            bool testCaseExecutionResult = false;
+
+            try{
+                testCaseExecutionResult = executeNextTestCase();
+            }
+            catch(const AssertCheckFailed&){
+                //That was ASSERT not included in any Test Case (report wrong usage)
+            }
+            catch(const SanityCheckFailed&){
+                //That was SANITY at Test Suite level (in setup or teardown)
+
+                //TODO: report no way to continue such Test Suite
+            }
+            catch(const std::exception& e){
+                //Report exception is detected at Test Suite level
+
+                //TODO: report no way to continue such Test Suite
+            }
+            catch(...){
+                //Report unknown exception detected at Test Suite level
+            }
+
+
+            if( testCaseExecutionResult  ){
+                onTestCasePassed();
+            }
+            else{
+                onTestCaseFailed();
+            }
+
+            allNestedTCSucceeded = allNestedTCSucceeded && testCaseExecutionResult;
+        }
+        onTestSuiteComplete();
+
+        return allNestedTCSucceeded;
     }
 
-    void OnTestSuiteComplete(){
-        //make "after" part available
-        ready = true;
-    }
+
 
 private:
     friend ContinuousActivity<FullContextForTestSuite, TestSuiteContextAfter>;
@@ -1183,6 +1196,11 @@ private:
     void onTestCaseFailed(){
         parentTestSession.OnTestCaseFailed();
         ++testCasesFailed;
+    }
+
+    void onTestSuiteComplete(){
+        //make "after" part available
+        ready = true;
     }
 };
 
