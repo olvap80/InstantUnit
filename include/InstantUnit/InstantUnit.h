@@ -1143,7 +1143,7 @@ public:
     FullContextForTestCase(
         const std::string& testCaseNameToUse,
         FullContextForTestSuite& parentTestSuiteUsed,
-        CodeToRunForTest codeToRunForTest
+        const CodeToRunForTest& codeToRunForTest
     )
         :   testCaseName(testCaseNameToUse),
             parentTestSuite(parentTestSuiteUsed),
@@ -1312,7 +1312,31 @@ private:
 };*/
 
 
-
+///Execute single Test Case, return true on success, false on failure
+bool RunTestCase(const std::function<void()>& tcBody){
+    try{
+        tcBody();
+        return true;
+    }
+    catch(const AssertCheckFailed&){
+        //Assert failed inside Test Case
+        //TODO: report failure
+    }
+    catch(const SanityCheckFailed&){
+        //Sanity failed inside Test Case
+        //TODO: report failure
+        //(and continue execution of other TCs)
+    }
+    catch(const std::exception& e){
+        //TODO: Report exception detected
+        //(and continue execution of other TCs)
+    }
+    catch(...){
+        //TODO: Report unknown exception detected at Test Case level
+        //(and continue execution of other TCs)
+    }
+    return false;
+}
 
 ///Base class to be executed while running tests
 /** Collect those tests, that are part of the "DEFAULT" test suite*/
@@ -1345,20 +1369,7 @@ private:
 
     ///Method to be run for all found Runnable instances
     bool RunTest(){
-        try{
-            Runner_DoTest();
-            return false;//IsTestFailed();
-        }
-        catch(const AssertCheckFailed&){
-            //Report Test Case failed
-        }
-        catch(const std::exception& e){
-            //Report exception detected (and continue execution)
-        }
-        catch(...){
-            //Report unknown exception detected (and continue execution)
-        }
-        return false;
+        return RunTestCase( [&]() { Runner_DoTest(); } );
     }
 
 };
@@ -1407,6 +1418,7 @@ private:
           (Note: each time different TC is executed) */
         for(;;){
             try{
+                bool tcResult = false;
                 Runner_DoNextTest(
                     [&] (
                         const char* fileName, unsigned lineNumber,
@@ -1414,27 +1426,8 @@ private:
                         const std::function<void()>& testCaseBody
                     ){
                         //This code is executed after setup and before teardown
-                        try{
-                            testCaseBody();
-                        }
-                        catch(const AssertCheckFailed&){
-                            //Assert failed inside test case
-                            //TODO: report failure
-                            throw UnwindAndContinueTestSuite();
-                        }
-                        catch(const SanityCheckFailed&){
-                            //Sanity failed inside test case
-                            //TODO: report failure
-                            throw UnwindAndContinueTestSuite();
-                        }
-                        catch(const std::exception& e){
-                            //Report exception is detected at Test Case level
 
-                            //TODO: report no way to continue such Test Suite
-                        }
-                        catch(...){
-                            //Report unknown exception detected at Test Case level
-                        }
+                        tcResult = RunTestCase(testCaseBody);
                     }
                 );
                 return true;
