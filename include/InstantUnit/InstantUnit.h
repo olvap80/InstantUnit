@@ -790,7 +790,7 @@ public:
     virtual void OnVerify(const ContextForVerify& contextForVerify) = 0;
 
 
-    ///Called when test case is pased
+    ///Called when test case is passed
     virtual void OnTestPassed(const std::string& testName) = 0;
     ///Called when test case is failed
     virtual void OnTestFailled(const std::string& testName) = 0;
@@ -1036,6 +1036,7 @@ private:
 };
 
 
+
 ///Collect information available before/after Test Suite
 class FullContextForTestSuite:
     public ContinuousActivity<FullContextForTestSuite, TestSuiteContextAfter>{
@@ -1094,20 +1095,55 @@ public:
 
     //TestSuite level events processing
 
+    //Actual Test Suite execution
 
-    void OnTestCaseStart(){
-        parentTestSession.OnTestCaseStart();
-        ++testCasesExecuted;
-    }
+    ///Function to executed single test case
+    /**TBD*/
+    typedef std::function<
+                bool()
+            > TestCaseExecutorFunction;
 
-    void OnTestCasePassed(){
-        parentTestSession.OnTestCasePassed();
-        ++testCasesPassed;
-    }
+    ///
+    /**\returns empty function (nullptr) when iteration completes*/
+    typedef std::function<
+                TestCaseExecutorFunction()
+            > GetNextTestCaseExecutorFunction;
 
-    void OnTestCaseFailed(){
-        parentTestSession.OnTestCaseFailed();
-        ++testCasesFailed;
+
+    bool OnNextTestCase(const TestCaseExecutorFunction& executeNextTestCase){
+        onTestCaseStart();
+
+        bool testCaseExecutionResult = false;
+
+        try{
+            testCaseExecutionResult = executeNextTestCase();
+        }
+        catch(const AssertCheckFailed&){
+            //That was ASSERT not included in any Test Case (report wrong usage)
+        }
+        catch(const SanityCheckFailed&){
+            //That was SANITY at Test Suite level (in setup or teardown)
+
+            //TODO: report no way to continue such Test Suite
+        }
+        catch(const std::exception& e){
+            //Report exception is detected at Test Suite level
+
+            //TODO: report no way to continue such Test Suite
+        }
+        catch(...){
+            //Report unknown exception detected at Test Suite level
+        }
+
+
+        if( testCaseExecutionResult  ){
+            onTestCasePassed();
+        }
+        else{
+            onTestCaseFailed();
+        }
+
+        return testCaseExecutionResult;
     }
 
     void OnTestSuiteComplete(){
@@ -1133,17 +1169,27 @@ private:
     unsigned testCasesExecuted = 0;
     unsigned testCasesPassed = 0;
     unsigned testCasesFailed = 0;
+
+    void onTestCaseStart(){
+        parentTestSession.OnTestCaseStart();
+        ++testCasesExecuted;
+    }
+
+    void onTestCasePassed(){
+        parentTestSession.OnTestCasePassed();
+        ++testCasesPassed;
+    }
+
+    void onTestCaseFailed(){
+        parentTestSession.OnTestCaseFailed();
+        ++testCasesFailed;
+    }
 };
 
 
 ///Collect information available before/after TestCase
 class FullContextForTestCase: public TestCaseContextAfter{
 public:
-    ///
-    typedef std::function<
-                void(bool& allAssertsAndExpectsPassedFlag)
-            > TestCaseBodyFunction;
-
     ///Create named TestCase
     FullContextForTestCase(
         const std::string& testCaseNameToUse,
@@ -1151,6 +1197,43 @@ public:
     )
         :   testCaseName(testCaseNameToUse),
             parentTestSuite(parentTestSuiteUsed) {}
+
+
+    //override from TestingActivityContextBefore
+
+    bool IsErrorOnStart() const override{
+        return true; //TODO:
+    }
+
+
+    //override from TestingActivityContextAfter
+
+    bool IsPassed() const override{
+        CheckIfReady("IsPassed");
+        return isPassed;
+    }
+
+
+    //override from TestCaseContextBefore
+
+    std::string Name() const override{
+        return testCaseName;
+    }
+
+    const TestSuiteContextBefore& ContainingTestSuite() const override{
+        return parentTestSuite;
+    }
+
+    //override from TestCaseContextAfter
+
+
+    //Actual Test Case execution
+
+    ///Function to be executed as test case body
+    /**That function contains all those ASSERT, EXPECT etc stuff*/
+    typedef std::function<
+            void(bool& allAssertsAndExpectsPassedFlag)
+        > TestCaseBodyFunction;
 
     ///Execute single Test Case, return true on TC success, false on TC failure
     bool ExecuteTestCase(
@@ -1182,36 +1265,6 @@ public:
         }
         return false;
     }
-
-
-    //override from TestingActivityContextBefore
-
-    bool IsErrorOnStart() const override{
-        return true; //TODO:
-    }
-
-
-    //override from TestingActivityContextAfter
-
-    bool IsPassed() const override{
-        CheckIfReady("IsPassed");
-        return isPassed;
-    }
-
-
-    //override from TestCaseContextBefore
-
-    std::string Name() const override{
-        return testCaseName;
-    }
-
-    const TestSuiteContextBefore& ContainingTestSuite() const override{
-        return parentTestSuite;
-    }
-
-    //override from TestCaseContextAfter
-
-    //
 
 private:
     ///Ensure "after" part is available
@@ -1430,7 +1483,11 @@ private:
 
     ///Method to be run for all found Runnable instances
     /**\returns true when all nested TC succeeded, false otherwise*/
-    bool RunTestSuite(){
+    bool RunTestSuite(FullContextForTestSession& fullContextForTestSession){
+        //"DEFAULT" Test Suite context instance
+        details::FullContextForTestSuite fullContextForDefaultTestSuite("DEFAULT", fullContextForTestSession);
+
+
         bool allNestedTCSucceeded = true;
 
         //current Test Suite execution state
@@ -1453,6 +1510,7 @@ private:
         while( StateCompleted != state ){
             try{
                 bool testCaseResult = false;
+
                 Runner_DoNextTest(
                     [&] (
                         const char* fileName, unsigned lineNumber,
@@ -1507,10 +1565,12 @@ inline bool RunTests()
 
     bool allPassed = true;
 
+    //Run "DEFAULT" Test Suite first
     {
-        //Run "DEFAULT" Test Suite first
+        //"DEFAULT" Test Suite context instance
         details::FullContextForTestSuite fullContextForDefaultTestSuite("DEFAULT", fullContextForTestSession);
 
+        //actual iteration for all elements in "DEFAULT" Test Suite
         details::CollectInstancesOf<
             details::SimpleStandaloneTestRunner
         >::ForEachInstance(
@@ -1519,17 +1579,17 @@ inline bool RunTests()
             }
         );
     }
-
 /*
+
     //Run other Test Suites available
     details::CollectInstancesOf<
         details::TestSuiteRunner
     >::ForEachInstance(
         [&](details::TestSuiteRunner& test){
-            allPassed = test.RunTestSuite() && allPassed;
+            allPassed = test.RunTestSuite(fullContextForTestSession) && allPassed;
         }
-    );*/
-
+    );
+*/
     return allPassed;
 }
 
