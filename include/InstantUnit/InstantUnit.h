@@ -1139,18 +1139,49 @@ private:
 ///Collect information available before/after TestCase
 class FullContextForTestCase: public TestCaseContextAfter{
 public:
-    ///Function to execute test case, return true when passed, false otherwise
-    typedef std::function<bool()> CodeToRunForTest;
+    ///
+    typedef std::function<
+                void(bool& allAssertsAndExpectsPassedFlag)
+            > TestCaseBodyFunction;
 
     ///Create named TestCase
     FullContextForTestCase(
         const std::string& testCaseNameToUse,
-        FullContextForTestSuite& parentTestSuiteUsed,
-        const CodeToRunForTest& codeToRunForTest
+        FullContextForTestSuite& parentTestSuiteUsed
     )
         :   testCaseName(testCaseNameToUse),
-            parentTestSuite(parentTestSuiteUsed),
-            codeToRun(codeToRunForTest) {}
+            parentTestSuite(parentTestSuiteUsed) {}
+
+    ///Execute single Test Case, return true on TC success, false on TC failure
+    bool ExecuteTestCase(
+        const TestCaseBodyFunction& tcBody
+    ){
+        try{
+            bool allAssertsAndExpectsPassedFlag = true;
+
+            tcBody(allAssertsAndExpectsPassedFlag);
+
+            return allAssertsAndExpectsPassedFlag;
+        }
+        catch(const AssertCheckFailed&){
+            //Assert failed inside Test Case
+            //TODO: report failure
+        }
+        catch(const SanityCheckFailed&){
+            //Sanity failed inside Test Case
+            //TODO: report failure
+            //(and continue execution of other TCs)
+        }
+        catch(const std::exception& e){
+            //TODO: Report exception detected
+            //(and continue execution of other TCs)
+        }
+        catch(...){
+            //TODO: Report unknown exception detected at Test Case level
+            //(and continue execution of other TCs)
+        }
+        return false;
+    }
 
 
     //override from TestingActivityContextBefore
@@ -1195,7 +1226,6 @@ private:
     std::string testCaseName;
     FullContextForTestSuite& parentTestSuite;
 
-    CodeToRunForTest codeToRun;
     bool isPassed = false;
 };
 
@@ -1315,34 +1345,21 @@ private:
 };*/
 
 
-///Execute single Test Case, return true on TC success, false on TC failure
-bool RunTestCase(
-    const std::function<void(bool& allAssertsAndExpectsPassedFlag)>& tcBody
-){
-    try{
-        bool allAssertsAndExpectsPassedFlag = true;
-        tcBody(allAssertsAndExpectsPassedFlag);
-        return allAssertsAndExpectsPassedFlag;
-    }
-    catch(const AssertCheckFailed&){
-        //Assert failed inside Test Case
-        //TODO: report failure
-    }
-    catch(const SanityCheckFailed&){
-        //Sanity failed inside Test Case
-        //TODO: report failure
-        //(and continue execution of other TCs)
-    }
-    catch(const std::exception& e){
-        //TODO: Report exception detected
-        //(and continue execution of other TCs)
-    }
-    catch(...){
-        //TODO: Report unknown exception detected at Test Case level
-        //(and continue execution of other TCs)
-    }
-    return false;
-}
+/*
+
+typedef std::function<
+            void(const Runner_TestCaseBodyFunction& testCaseBody)
+        > TestCaseExecutorFunction;
+
+///Called by TEST_CASE macro inside Runner_DoNextTest
+typedef std::function<
+            TestCaseExecutorFunction(
+                const char* testCaseFileName, unsigned testCaseLineNumber,
+                const char* testCaseName
+            )
+        > MakeTestCaseExecutorFunction;
+
+*/
 
 ///Base class to be executed while running tests
 /** Collect those tests, that are part of the "DEFAULT" test suite*/
@@ -1375,14 +1392,18 @@ private:
 
     ///Method to be run for all found Runnable instances
     /**\returns true on TC success, false on TC failure*/
-    bool RunTest(){
-        return RunTestCase(
-            [&](bool& allExpectsAlsoPassedFlag)
-                { Runner_DoTest(allExpectsAlsoPassedFlag); }
+    bool RunTest(FullContextForTestSuite& fullContextForTestSuite){
+        FullContextForTestCase fullContextForTestCase(Runner_CurrentTestName(), fullContextForTestSuite);
+
+        return fullContextForTestCase.ExecuteTestCase(
+            [&](bool& allAssertsAndExpectsPassedFlag)
+                { Runner_DoTest(allAssertsAndExpectsPassedFlag); }
         );
     }
 
 };
+
+#if 0
 
 ///Base class to be executed while running tests
 /** Collect those tests, that are part of the "DEFAULT" test suite*/
@@ -1391,16 +1412,7 @@ class TestSuiteRunner:
 {
 protected:
 
-    ///Called by TEST_CASE macro inside Runner_DoNextTest
-    typedef std::function<
-                void(
-                    const char* fileName, unsigned lineNumber,
-                    const char* testCaseName,
-                    const std::function<
-                        void(bool& allExpectsAlsoPassedFlag)
-                    >& testCaseBody
-                )
-            > Runner_OnTestCase;
+
 
     ///Method called to do actual testing (invoke test cases)
     virtual void Runner_DoNextTest(
@@ -1446,7 +1458,7 @@ private:
                         const char* fileName, unsigned lineNumber,
                         const char* testCaseName,
                         const std::function<
-                            void(bool& allExpectsAlsoPassedFlag)
+                            void(bool& allAssertsAndExpectsPassedFlag)
                         >& testCaseBody
                     ){
                         //This code is executed after setup and before teardown
@@ -1485,6 +1497,7 @@ private:
     }
 
 };
+#endif
 
 } //namespace InstantUnit::details
 
@@ -1494,15 +1507,20 @@ inline bool RunTests()
 
     bool allPassed = true;
 
-    //Run "DEFAULT" Test Suite first
-    details::CollectInstancesOf<
-        details::SimpleStandaloneTestRunner
-    >::ForEachInstance(
-        [&](details::SimpleStandaloneTestRunner& test){
-            allPassed = test.RunTest() && allPassed;
-        }
-    );
+    {
+        //Run "DEFAULT" Test Suite first
+        details::FullContextForTestSuite fullContextForDefaultTestSuite("DEFAULT", fullContextForTestSession);
 
+        details::CollectInstancesOf<
+            details::SimpleStandaloneTestRunner
+        >::ForEachInstance(
+            [&](details::SimpleStandaloneTestRunner& test){
+                allPassed = test.RunTest(fullContextForDefaultTestSuite) && allPassed;
+            }
+        );
+    }
+
+/*
     //Run other Test Suites available
     details::CollectInstancesOf<
         details::TestSuiteRunner
@@ -1510,7 +1528,7 @@ inline bool RunTests()
         [&](details::TestSuiteRunner& test){
             allPassed = test.RunTestSuite() && allPassed;
         }
-    );
+    );*/
 
     return allPassed;
 }

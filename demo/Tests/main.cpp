@@ -20,6 +20,7 @@ TEST("Test 2")
     std::cout << "InstantUnit 222" << std::endl;
 }
 
+/*
 TEST_SUITE("Test Suite 1")
 {
     std::cout << "InstantUnit 333" << std::endl;
@@ -28,6 +29,7 @@ TEST_SUITE("Test Suite 1")
         std::cout << "InstantUnit 444" << std::endl;
     });
 }
+*/
 
 int main()
 {
