@@ -55,9 +55,10 @@ Here:
 Note1: Both ASSERT and EXPECT macro are intended to produce test output
        and update test execution statistics.
 
-Note2: there is also a set of SANITY_* macro to ensure "critical conditions",
-       that do not produce any test output when passed,
-       see documentation below.
+Note2: there are also SANITY_CHECK and CRITICAL_CHECK macro to ensure
+       "critical conditions", that do not produce any test output when passed,
+       but scream loudly on failure.
+       Please see corresponding documentation below for more details.
 
 
 You can write a condition to be checked directly inside the ASSERT
@@ -316,15 +317,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     InstantUnit::
 
 
-//TODO: think if we really need that SANITY_ stuff
-
-/**The difference between SANITY_FOR_TEST and ASSERT if that
-   SANITY_FOR_TEST does not write anything to output for positive case */
-#define SANITY_FOR_TEST(condition) SANITY_FOR_TEST_CASE(condition)
-#define SANITY_FOR_TEST_CASE(condition)
-
-#define SANITY_FOR_TEST_SUITE
-
+///Check for conditions that break/corrupt Test Case or Test Suite on failure
+/**This kind of check can fail only in exceptional cases
+   and is intended to ensure that test environment is not broken.
+   The difference between SANITY_CHECK and ASSERT if that
+   SANITY_CHECK does not write anything to output for positive case.
+   Also one can place SANITY_CHECK to Setup sections
+   (and to Teardown section, but do this
+    only after all the Teardown actions are actually done).*/
+#define SANITY_CHECK(condition)
 
 ///Check for conditions that break/corrupt entire process on failure
 /** Intended to make "Fatal" check macro for "critical condition checks".
@@ -333,7 +334,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  and cannot continue.
  Once SANITY failed, no more test can be executed in the process (exit process).
  Usage is similar to ASSERT and EXPECT from above.*/
-#define SANITY_FOR_TEST_SESSION()
+#define CRITICAL_CHECK(condition)
+
+
 
 
 ///Use this macro in the code to not define main manually
@@ -1312,7 +1315,7 @@ private:
 };*/
 
 
-///Execute single Test Case, return true on success, false on failure
+///Execute single Test Case, return true on TC success, false on TC failure
 bool RunTestCase(const std::function<void()>& tcBody){
     try{
         tcBody();
@@ -1368,6 +1371,7 @@ private:
     friend bool InstantUnit::RunTests();
 
     ///Method to be run for all found Runnable instances
+    /**\returns true on TC success, false on TC failure*/
     bool RunTest(){
         return RunTestCase( [&]() { Runner_DoTest(); } );
     }
@@ -1405,8 +1409,16 @@ private:
 
 
     ///Method to be run for all found Runnable instances
+    /**\returns true when all nested TC succeeded, false otherwise*/
     bool RunTestSuite(){
-        bool isFirstRun = true;
+        bool allNestedTCSucceeded = true;
+
+        enum{
+            StateJustStartedRunFirstTC,
+            StateCollectOtherTCInformation,
+            StateRunRestOfTC,
+            StateCompleted
+        } state;
         bool totalTestCases = 0;
 
         //all test casesin the test suite shall be in the same file
@@ -1416,9 +1428,9 @@ private:
 
         /*Call Runner_DoNextTest number of times to execute each nested TC
           (Note: each time different TC is executed) */
-        for(;;){
+        while( StateCompleted != state ){
             try{
-                bool tcResult = false;
+                bool testCaseResult = false;
                 Runner_DoNextTest(
                     [&] (
                         const char* fileName, unsigned lineNumber,
@@ -1427,13 +1439,19 @@ private:
                     ){
                         //This code is executed after setup and before teardown
 
-                        tcResult = RunTestCase(testCaseBody);
+                        testCaseResult = RunTestCase(testCaseBody);
+
+                        state = StateCompleted;
+
                     }
                 );
-                return true;
+
+                allNestedTCSucceeded = testCaseResult && allNestedTCSucceeded;
+
+                continue;
             }
             catch(const AssertCheckFailed&){
-                //That was ASSERT not included in any Test Case (wrong usage)
+                //That was ASSERT not included in any Test Case (report wrong usage)
             }
             catch(const SanityCheckFailed&){
                 //That was SANITY at Test Suite level (in setup or teardown)
@@ -1448,8 +1466,9 @@ private:
             catch(...){
                 //Report unknown exception detected at Test Suite level
             }
+            return false;
         }
-        return false;
+        return true;
     }
 
 };
