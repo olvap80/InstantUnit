@@ -1110,7 +1110,7 @@ public:
             > GetNextTestCaseExecutorFunction;
 
 
-    bool OnNextTestCase(
+    bool ProcessTestCases(
         const GetNextTestCaseExecutorFunction& getNextTestCaseExecutorFunction
     ){
         bool allNestedTCSucceeded = true;
@@ -1131,10 +1131,10 @@ public:
                 testCaseExecutionResult = executeNextTestCase();
             }
             catch(const AssertCheckFailed&){
-                //That was ASSERT not included in any Test Case (report wrong usage)
+                //That was ASSERT not included in any Test Case body (report wrong usage)
             }
             catch(const SanityCheckFailed&){
-                //That was SANITY at Test Suite level (in setup or teardown)
+                //That was SANITY at Test Suite level (in setup or teardown sections of TC)
 
                 //TODO: report no way to continue such Test Suite
             }
@@ -1474,7 +1474,6 @@ private:
 
 };
 
-#if 0
 
 ///Base class to be executed while running tests
 /** Collect those tests, that are part of the "DEFAULT" test suite*/
@@ -1483,7 +1482,16 @@ class TestSuiteRunner:
 {
 protected:
 
-
+    ///Called by TEST_CASE macro inside Runner_DoNextTest
+    typedef std::function<
+                void(
+                    const char* fileName, unsigned lineNumber,
+                    const char* testCaseName,
+                    const std::function<
+                        void(bool& allAssertsAndExpectsPassedFlag)
+                    >& testCaseBody
+                )
+            > Runner_OnTestCase;
 
     ///Method called to do actual testing (invoke test cases)
     virtual void Runner_DoNextTest(
@@ -1502,9 +1510,6 @@ private:
     ///Method to be run for all found Runnable instances
     /**\returns true when all nested TC succeeded, false otherwise*/
     bool RunTestSuite(FullContextForTestSession& fullContextForTestSession){
-        //"DEFAULT" Test Suite context instance
-        details::FullContextForTestSuite fullContextForDefaultTestSuite("DEFAULT", fullContextForTestSession);
-
 
         bool allNestedTCSucceeded = true;
 
@@ -1523,9 +1528,24 @@ private:
         //track line numbers of test cases to prevent same TC from being executed several times
         std::set<unsigned> executedLineNumbersForSanityCheck;
 
+        //Current Test Suite context instance
+        details::FullContextForTestSuite fullContextForCurrentTestSuite(
+            Runner_CurrentTestSiuteName(),
+            fullContextForTestSession
+        );
+
+        fullContextForCurrentTestSuite.ProcessTestCases(
+            [&]()-> details::FullContextForTestSuite::TestCaseExecutorFunction
+            {
+                return [&]()->bool{
+                    return false;
+                };
+            }
+        );
+
         /*Call Runner_DoNextTest number of times to execute each nested TC
           (Note: each time different TC is executed) */
-        while( StateCompleted != state ){
+        /*while( StateCompleted != state ){
             try{
                 bool testCaseResult = false;
 
@@ -1569,11 +1589,10 @@ private:
             }
             return false;
         }
-        return true;
+        return true;*/
     }
 
 };
-#endif
 
 } //namespace InstantUnit::details
 
