@@ -58,11 +58,10 @@ Note1: Both ASSERT and EXPECT macro are intended to produce test output
 Note2: there are also SANITY_CHECK and CRITICAL_CHECK macro to ensure
        "critical conditions", that do not produce any test output when passed,
        but scream loudly on failure.
-       Please see corresponding documentation below for more details.
+       More details in corresponding documentation below.
 
 
-You can write a condition to be checked directly inside the ASSERT
-or EXPECT macro:
+It is possible to write a condition to be checked directly inside the ASSERT or EXPECT:
 
 @code
     EXPECT(x > 3);
