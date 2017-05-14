@@ -459,8 +459,12 @@ public:
 ///This context is ready after activity completed
 /** Known testing activities: TestSession, TestSuite, TestCase and Checker
     (Note: see corresponding contexts for details) */
-class TestingActivityContextAfter{
+class TestingActivityContextAfter: protected TestingActivityContextBefore{
 public:
+    //All stuff from TestingActivityContextBefore also available
+    using TestingActivityContextBefore::Name;
+    using TestingActivityContextBefore::IsErrorOnStart;
+
     ///"Passed" indicator for entire activity
     /** @returns true only when activity completed and passed, false otherwise
 
@@ -497,8 +501,14 @@ public:
 ///This context is ready after activity completed and has time measurements
 /** Known time measured testing activities: TestSession, TestSuite
     (Note: see corresponding contexts for details) */
-class TimeMeasuredTestingActivityContextAfter: public TestingActivityContextAfter{
+class TimeMeasuredTestingActivityContextAfter:
+    public TestingActivityContextAfter,
+    protected TimeMeasuredTestingActivityContextBefore{
 public:
+    //All stuff from TimeMeasuredTestingActivityContextBefore also available
+    using TimeMeasuredTestingActivityContextBefore::StartTimePoint;
+    using TimeMeasuredTestingActivityContextBefore::StartSteadyTimePoint;
+
     ///This Testing Activity end time point
     virtual std::chrono::system_clock::time_point EndTimePoint() const = 0;
 
@@ -514,11 +524,17 @@ public:
 
     ///Total execution time of this Testing Activity
     /** Monotonic (steady) clock is used for calculation */
-    virtual std::chrono::steady_clock::duration Duration() const = 0;
+    std::chrono::steady_clock::duration Duration() const{
+        return EndSteadyTimePoint() - StartSteadyTimePoint();
+    }
 
     ///Total execution time of this Testing Activity
     /** Monotonic (steady) clock is used for calculation */
-    virtual std::chrono::seconds::rep DurationSeconds() const = 0;
+    std::chrono::seconds::rep DurationSeconds() const {
+        return  std::chrono::duration_cast<std::chrono::seconds>(
+                    Duration()
+                ).count();
+    }
 };
 
 
@@ -541,21 +557,26 @@ class TestSessionContextAfter:
     friend class details::FullContextForTestSuite;
 public:
     //All stuff from TestSessionContextBefore also available
-    using TestSessionContextBefore::Name;
-    using TestSessionContextBefore::StartTimePoint;
-    using TestSessionContextBefore::StartSteadyTimePoint;
     using TestSessionContextBefore::TestSuitesFound;
 
 
-    //TODO: test suites found (including default)
+    //TODO:
+    ///Total number of all test suites executed
+    //virtual unsigned TestCasesExecuted() const = 0;
 
-    ///Total number of all test cases found in all test suites
+    ///Total number of test suites passed (each nested test case passed)
+    //virtual unsigned TestCasesPassed() const = 0;
+
+    ///Total number of test suites failed (at least one nested test case failed)
+    //virtual unsigned TestCasesFailed() const = 0;
+
+    ///Total number of all test cases executed in all test suites
     virtual unsigned TestCasesExecuted() const = 0;
 
-    ///Total number or test cases passed (though all test suites)
+    ///Total number of test cases passed (though all test suites)
     virtual unsigned TestCasesPassed() const = 0;
 
-    ///Total number or test cases failed (though all test suites)
+    ///Total number of test cases failed (though all test suites)
     virtual unsigned TestCasesFailed() const = 0;
 };
 
@@ -592,9 +613,6 @@ class TestSuiteContextAfter:
     friend class details::FullContextForTestCase;
 public:
     //All stuff from TestSuiteContextBefore also available
-    using TestSuiteContextBefore::Name;
-    using TestSuiteContextBefore::StartTimePoint;
-    using TestSuiteContextBefore::StartSteadyTimePoint;
     using TestSuiteContextBefore::ContainingTestSession;
 
 
@@ -632,7 +650,6 @@ class TestCaseContextAfter: public TestingActivityContextAfter,
 {
 public:
     //All stuff from TestCaseContextBefore also available
-    using TestCaseContextBefore::Name;
     using TestCaseContextBefore::ContainingTestSuite;
     using TestCaseContextBefore::File;
     using TestCaseContextBefore::Line;
@@ -766,6 +783,7 @@ public:
                name is followed by a left parenthesis"
 
     see http://stackoverflow.com/questions/4251005/what-is-the-difference-between-a-preprocessor-macro-with-no-arguments-and-one-w
+    also https://gcc.gnu.org/onlinedocs/cpp/Function-like-Macros.html
 
     and
 
@@ -879,21 +897,6 @@ public:
         return endSteadyTimePoint;
     }
 
-
-    std::chrono::steady_clock::duration Duration() const override{
-        checkIfStarted();
-        checkIfCompleted();
-        static_cast<const Derived*>(this)->CheckIfReady("Duration");
-        return activityDuration;
-    }
-
-    std::chrono::seconds::rep DurationSeconds() const override{
-        checkIfStarted();
-        checkIfCompleted();
-        static_cast<const Derived*>(this)->CheckIfReady("DurationSeconds");
-        return std::chrono::duration_cast<std::chrono::seconds>(activityDuration).count();
-    }
-
 protected:
     ///Called by derived class once activity starts
     void OnActivityStart(){
@@ -906,10 +909,6 @@ protected:
     void OnActivityComplete(){
         endTimePoint = std::chrono::system_clock::now();
         endSteadyTimePoint = std::chrono::steady_clock::now();
-
-
-        activityDuration =   endSteadyTimePoint
-                           - startSteadyTimePoint;
     }
 
 private:
@@ -932,7 +931,6 @@ private:
 
     std::chrono::system_clock::time_point endTimePoint;
     std::chrono::steady_clock::time_point endSteadyTimePoint;
-    std::chrono::steady_clock::duration activityDuration;
 };
 
 
