@@ -1128,73 +1128,60 @@ public:
 
     //Actual Test Suite execution
 
-    ///Function to executed single test case
-    /**TBD*/
+    ///Function to execute single test case
+    /** Each test case is executed in context of test suite */
     typedef std::function<
                 bool()
             > TestCaseExecutorFunction;
 
-    ///Iterate over available test cases in test suite
-    /**\returns empty function (nullptr) when iteration completes*/
-    typedef std::function<
-                TestCaseExecutorFunction()
-            > GetNextTestCaseExecutorFunction;
 
-
-    bool ProcessTestCases(
-        const GetNextTestCaseExecutorFunction& getNextTestCaseExecutorFunction
+    bool ExecuteNextTestCase(
+        TestCaseExecutorFunction executeNextTestCase
     ){
-        bool allNestedTCSucceeded = true;
+        onTestCaseStart();
 
-        for(;;){
-            TestCaseExecutorFunction
-                executeNextTestCase = getNextTestCaseExecutorFunction();
-            if( !executeNextTestCase ){
-                break;
-            }
+        bool testCaseExecutionResult = false;
 
-
-            onTestCaseStart();
-
-            bool testCaseExecutionResult = false;
-
-            try{
-                testCaseExecutionResult = executeNextTestCase();
-            }
-            catch(const AssertCheckFailed&){
-                //That was ASSERT not included in any Test Case body (report wrong usage)
-
-            }
-            catch(const SanityCheckFailed&){
-                //That was SANITY at Test Suite level (in setup or teardown sections of TC)
-
-                //TODO: report no way to continue such Test Suite
-            }
-            catch(const std::exception& e){
-                //Report exception is detected at Test Suite level
-
-                //TODO: report no way to continue such Test Suite
-            }
-            catch(...){
-                //Report unknown exception detected at Test Suite level
-            }
-
-
-            if( testCaseExecutionResult  ){
-                onTestCasePassed();
-            }
-            else{
-                onTestCaseFailed();
-            }
-
-            allNestedTCSucceeded = allNestedTCSucceeded && testCaseExecutionResult;
+        try{
+            testCaseExecutionResult = executeNextTestCase();
         }
-        onTestSuiteComplete();
+        catch(const AssertCheckFailed&){
+            //That was ASSERT not included in any Test Case body (report wrong usage)
 
-        return allNestedTCSucceeded;
+        }
+        catch(const SanityCheckFailed&){
+            //That was SANITY at Test Suite level (in setup or teardown sections of TC)
+
+            //TODO: report no way to continue such Test Suite
+        }
+        catch(const std::exception& e){
+            //Report exception is detected at Test Suite level
+
+            //TODO: report no way to continue such Test Suite
+        }
+        catch(...){
+            //Report unknown exception detected at Test Suite level
+        }
+
+
+        if( testCaseExecutionResult  ){
+            onTestCasePassed();
+        }
+        else{
+            onTestCaseFailed();
+        }
+
+        allNestedTCSucceeded = allNestedTCSucceeded && testCaseExecutionResult;
     }
 
+    void OnAfterLastTestCase(){
+        //make "after" part available
+        ready = true;
+    }
 
+    bool AllNestedTCSucceeded() const {
+        return allNestedTCSucceeded;
+    }
 
 private:
     friend ContinuousActivity<FullContextForTestSuite, TestSuiteContextAfter>;
@@ -1214,6 +1201,8 @@ private:
     std::string file;
     unsigned line;
 
+    ///
+    bool allNestedTCSucceeded = true;
 
     unsigned testCasesExecuted = 0;
     unsigned testCasesPassed = 0;
@@ -1232,11 +1221,6 @@ private:
     void onTestCaseFailed(){
         parentTestSession.OnTestCaseFailed();
         ++testCasesFailed;
-    }
-
-    void onTestSuiteComplete(){
-        //make "after" part available
-        ready = true;
     }
 };
 
@@ -1298,7 +1282,7 @@ public:
         > TestCaseBodyFunction;
 
     ///Execute single Test Case, return true on TC success, false on TC failure
-    bool ExecuteTestCase(
+    bool ExecuteTestCaseBody(
         const TestCaseBodyFunction& tcBody
     ){
         try{
@@ -1526,9 +1510,10 @@ private:
 
         /* TC Body is executed inside FullContextForTestCase
           to collect execution results/stats in that context */
-        return fullContextForTestCase.ExecuteTestCase(
-            [&](bool& allAssertsAndExpectsPassedFlag)
-                { Runner_DoTest(allAssertsAndExpectsPassedFlag); }
+        return fullContextForTestCase.ExecuteTestCaseBody(
+            [&](bool& allAssertsAndExpectsPassedFlag){
+                 Runner_DoTest(allAssertsAndExpectsPassedFlag);
+            }
         );
     }
 
@@ -1602,14 +1587,14 @@ private:
             file, line
         );
 
-        fullContextForCurrentTestSuite.ProcessTestCases(
+        /*fullContextForCurrentTestSuite.ProcessTestCases(
             [&]()-> details::FullContextForTestSuite::TestCaseExecutorFunction
             {
                 return [&]()->bool{
                     return false;
                 };
             }
-        );
+        );*/
 
         /*Call Runner_DoNextTest number of times to execute each nested TC
           (Note: each time different TC is executed) */
