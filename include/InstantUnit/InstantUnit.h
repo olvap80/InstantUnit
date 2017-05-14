@@ -227,9 +227,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <set>
 
 
-//#############################################################################
+//##############################################################################
 //Macros for creating and grouping tests
-//#############################################################################
+//##############################################################################
 
 ///Simple named Test (standalone Test Case without shared Setup/Teardown stuff)
 /** Place Test code in braces after TEST macro.
@@ -352,15 +352,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         return InstantUnit::RunTests(argc, argv); \
     }
 
-//#############################################################################
+//##############################################################################
 //Predefined predicates, running tests options, reporting support
-//#############################################################################
+//##############################################################################
 
 namespace InstantUnit{
 
 
-//=============================================================================
-//Predefined verifiers (predicates) -------------------------------------------
+//==============================================================================
+//Predefined verifiers (predicates) --------------------------------------------
 
 ///Test double values are equal with precission
 inline bool IsNear(double val1, double val2, double precission){
@@ -594,10 +594,10 @@ public:
     virtual const TestSessionContextBefore& ContainingTestSession() const = 0;
 
     ///File where corresponding Test Suite is placed
-    //virtual std::string File() const = 0;
+    virtual std::string File() const = 0;
 
     ///Line where corresponding Test Suite starts
-    //virtual unsigned Line() const = 0;
+    virtual unsigned Line() const = 0;
 };
 
 ///Information available after Test Suite has been executed
@@ -614,6 +614,8 @@ class TestSuiteContextAfter:
 public:
     //All stuff from TestSuiteContextBefore also available
     using TestSuiteContextBefore::ContainingTestSession;
+    using TestSuiteContextBefore::File;
+    using TestSuiteContextBefore::Line;
 
 
     ///Number of all test cases in this test suite
@@ -1053,10 +1055,14 @@ public:
     ///Create named TestSuite (package of test cases)
     FullContextForTestSuite(
         const std::string& testSuiteNameToUse,
-        FullContextForTestSession& parentTestSessionUsed
+        FullContextForTestSession& parentTestSessionUsed,
+        const std::string& fileWherePlaced,
+        unsigned lineWhereStarts
     )
         :   testSuiteName(testSuiteNameToUse),
-            parentTestSession(parentTestSessionUsed) {}
+            parentTestSession(parentTestSessionUsed),
+            file(fileWherePlaced),
+            line(lineWhereStarts)  {}
 
 
     //override from TestingActivityContextBefore
@@ -1082,6 +1088,11 @@ public:
     const TestSessionContextBefore& ContainingTestSession() const override{
         return parentTestSession;
     }
+
+
+    std::string File() const override { return file; }
+
+    unsigned Line() const override { return line; }
 
 
     //override from TestSuiteContextAfter
@@ -1188,6 +1199,10 @@ private:
     std::string testSuiteName;
     FullContextForTestSession& parentTestSession;
 
+    std::string file;
+    unsigned line;
+
+
     unsigned testCasesExecuted = 0;
     unsigned testCasesPassed = 0;
     unsigned testCasesFailed = 0;
@@ -1255,9 +1270,9 @@ public:
         return parentTestSuite;
     }
 
-    virtual std::string File() const { return file; }
+    std::string File() const override { return file; }
 
-    virtual unsigned Line() const { return line; }
+    unsigned Line() const override { return line; }
 
     //override from TestCaseContextAfter
 
@@ -1513,6 +1528,12 @@ class TestSuiteRunner:
     public CollectInstancesOf<TestSuiteRunner>
 {
 protected:
+    TestSuiteRunner(
+        const std::string& fileWherePlaced,
+        unsigned lineWhereStarts
+    )
+        :   file(fileWherePlaced),
+            line(lineWhereStarts) {}
 
     ///Called by TEST_CASE macro inside Runner_DoNextTest
     typedef std::function<
@@ -1562,8 +1583,8 @@ private:
 
         //Current Test Suite context instance
         details::FullContextForTestSuite fullContextForCurrentTestSuite(
-            Runner_CurrentTestSiuteName(),
-            fullContextForTestSession
+            Runner_CurrentTestSiuteName(), fullContextForTestSession,
+            file, line
         );
 
         fullContextForCurrentTestSuite.ProcessTestCases(
@@ -1620,10 +1641,12 @@ private:
                 //Report unknown exception detected at Test Suite level
             }
             return false;
-        }
-        return true;*/
+        }*/
+        return true;
     }
 
+    std::string file;
+    unsigned line;
 };
 
 } //namespace InstantUnit::details
@@ -1637,7 +1660,10 @@ inline bool RunTests()
     //Run "DEFAULT" Test Suite first
     {
         //"DEFAULT" Test Suite context instance
-        details::FullContextForTestSuite fullContextForDefaultTestSuite("DEFAULT", fullContextForTestSession);
+        details::FullContextForTestSuite fullContextForDefaultTestSuite(
+            "DEFAULT", fullContextForTestSession,
+            "DEFAULT test suite for simple TEST macro", 0
+        );
 
         //actual iteration for all elements in "DEFAULT" Test Suite
         details::CollectInstancesOf<
