@@ -112,10 +112,10 @@ Please notice how those Setup and Teardown are located:
         ... //declare variables, setup environment, etc
 
         TEST_CASE("My TC 1"){ //NU_TestCaseRunner(__FILE__, __LINE__, "TC 1") ->* [&]() {
-           ... //Checks and asserts (IU_CHECK, IU_IS_EQUAL, UI_IS_CLOSE etc)
+           ... //Expects and asserts
         };
         TEST_CASE("My TC 2"){ //NU_TestCaseRunner(__FILE__, __LINE__, "TC 2") ->* [&]() {
-           ... //Checks and asserts (IU_CHECK, IU_IS_EQUAL, UI_IS_CLOSE, etc)
+           ... //Expects and asserts
         };
         ...//etc
 
@@ -139,7 +139,7 @@ Teardown code is still automatically executed even in case of exception in
 a Test Case body.
 Every variable declared in the Setup code is visible from the Teardown code.
 
-Practical sample:
+Sample:
 @code
     #include "InstantUnit/InstantUnit.h"
     #include <vector>
@@ -239,6 +239,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     class IU_CAT_ID(Test_,__LINE__): \
         private InstantUnit::details::SimpleStandaloneTestRunner \
     { \
+    public: \
+        IU_CAT_ID(Test_,__LINE__)( \
+            const std::string& fileWherePlaced, \
+            unsigned lineWhereStarts \
+        ) \
+            :   SimpleStandaloneTestRunner(fileWherePlaced, lineWhereStarts) {} \
+    protected: \
         /*Test code will go here, called automatically from SimpleStandaloneTestRunner*/ \
         virtual void Runner_DoTest(bool& allAssertsAndExpectsPassedFlag) override; \
         \
@@ -246,7 +253,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             { return testNameString; } \
     }; \
     /*Corresponding static (!) instance to be part of the run*/ \
-    static IU_CAT_ID(Test_,__LINE__) IU_CAT_ID(TestInstance_,__LINE__); \
+    static IU_CAT_ID(Test_,__LINE__) IU_CAT_ID(TestInstance_,__LINE__)(__FILE__, __LINE__); \
     /*Test body will follow below*/ \
     void IU_CAT_ID(Test_,__LINE__)::Runner_DoTest(bool& allAssertsAndExpectsPassedFlag)
 
@@ -320,7 +327,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /**This kind of check can fail only in exceptional cases
    and is intended to ensure that test environment is not broken.
    The difference between SANITY_CHECK and ASSERT if that
-   SANITY_CHECK does not write anything to output for positive case.
+   SANITY_CHECK does not write anything to output for "passed" condition.
    Also one can place SANITY_CHECK to Setup sections
    (and to Teardown section, but do this
     only after all the Teardown actions are actually done).*/
@@ -328,7 +335,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ///Check for conditions that break/corrupt entire process on failure
 /** Intended to make "Fatal" check macro for "critical condition checks".
- Never goes to output for "passed" case and does not affect statistics.
+ Never goes to output for "passed" condition and does not affect statistics.
  Failed SANITY check means entire test session is corrupted/broken
  and cannot continue.
  Once SANITY failed, no more test can be executed in the process (exit process).
@@ -365,7 +372,7 @@ inline bool IsNear(double val1, double val2, double precission){
 ///Test value is within limits (fromInclusive <= val <= toInclusive)
 template<class T>
 inline bool IsBetween(T val, T fromInclusive, T toInclusive){
-    return false;
+    return val >= fromInclusive && val <= toInclusive;
 }
 
 
@@ -457,12 +464,15 @@ public:
     ///"Passed" indicator for entire activity
     /** @returns true only when activity completed and passed, false otherwise
 
-        For TestSession "Passed" means all contained Test Suites passed.
-        For TestSuite "Passed" means all contained Test Cases passed.
-        For TestCase "Passed" means all contained checks passed.
-        For Checker "Passed" means corresponding condition is true.*/
+        - For TestSession "Passed" means all contained Test Suites passed.
+        - For TestSuite "Passed" means all contained Test Cases passed.
+        - For TestCase "Passed" means all contained checks passed.
+        - For Checker "Passed" means corresponding condition is true.*/
     virtual bool IsPassed() const = 0;
 };
+
+
+
 
 
 ///This context is created before activity starts and starts measuring time
@@ -537,6 +547,8 @@ public:
     using TestSessionContextBefore::TestSuitesFound;
 
 
+    //TODO: test suites found (including default)
+
     ///Total number of all test cases found in all test suites
     virtual unsigned TestCasesExecuted() const = 0;
 
@@ -559,6 +571,12 @@ public:
     ///Access to available containing TestSession information
     /** Note: only "before" part is available here */
     virtual const TestSessionContextBefore& ContainingTestSession() const = 0;
+
+    ///File where corresponding Test Suite is placed
+    //virtual std::string File() const = 0;
+
+    ///Line where corresponding Test Suite starts
+    //virtual unsigned Line() const = 0;
 };
 
 ///Information available after Test Suite has been executed
@@ -580,20 +598,13 @@ public:
     using TestSuiteContextBefore::ContainingTestSession;
 
 
-    ///File where corresponding Test Suite is placed
-    //virtual std::string File() const = 0;
-
-    ///Line where corresponding Test Suite is placed
-    //virtual unsigned Line() const = 0;
-
-
     ///Number of all test cases in this test suite
     virtual unsigned TestCasesExecuted() const = 0;
 
     ///Number of all test cases passed in this test suite
     virtual unsigned TestCasesPassed() const = 0;
 
-    ///number of all test cases failed in this test suite
+    ///Number of all test cases failed in this test suite
     virtual unsigned TestCasesFailed() const = 0;
 };
 
@@ -606,11 +617,11 @@ public:
     ///Access to containing Test Suite
     virtual const TestSuiteContextBefore& ContainingTestSuite() const = 0;
 
-    ///File where corresponding Test Suite is placed
-    //virtual std::string File() const = 0;
+    ///File where corresponding Test Case is placed
+    virtual std::string File() const = 0;
 
-    ///Line where corresponding Test Suite is placed
-    //virtual unsigned Line() const = 0;
+    ///Line where corresponding Test Case is placed
+    virtual unsigned Line() const = 0;
 };
 
 ///Information available after test case has been executed
@@ -623,7 +634,8 @@ public:
     //All stuff from TestCaseContextBefore also available
     using TestCaseContextBefore::Name;
     using TestCaseContextBefore::ContainingTestSuite;
-
+    using TestCaseContextBefore::File;
+    using TestCaseContextBefore::Line;
 };
 
 
@@ -1210,10 +1222,14 @@ public:
     ///Create named TestCase
     FullContextForTestCase(
         const std::string& testCaseNameToUse,
-        FullContextForTestSuite& parentTestSuiteUsed
+        FullContextForTestSuite& parentTestSuiteUsed,
+        const std::string& fileWherePlaced,
+        unsigned lineWhereStarts
     )
         :   testCaseName(testCaseNameToUse),
-            parentTestSuite(parentTestSuiteUsed) {}
+            parentTestSuite(parentTestSuiteUsed),
+            file(fileWherePlaced),
+            line(lineWhereStarts) {}
 
 
     //override from TestingActivityContextBefore
@@ -1240,6 +1256,10 @@ public:
     const TestSuiteContextBefore& ContainingTestSuite() const override{
         return parentTestSuite;
     }
+
+    virtual std::string File() const { return file; }
+
+    virtual unsigned Line() const { return line; }
 
     //override from TestCaseContextAfter
 
@@ -1295,6 +1315,9 @@ private:
 
     std::string testCaseName;
     FullContextForTestSuite& parentTestSuite;
+
+    std::string file;
+    unsigned line;
 
     bool isPassed = false;
 };
@@ -1437,6 +1460,13 @@ class SimpleStandaloneTestRunner:
     public CollectInstancesOf<SimpleStandaloneTestRunner>
 {
 protected:
+    SimpleStandaloneTestRunner(
+        const std::string& fileWherePlaced,
+        unsigned lineWhereStarts
+    )
+        :   file(fileWherePlaced),
+            line(lineWhereStarts) {}
+
 
     ///Method called to do actual testing
     virtual void Runner_DoTest(bool& allAssertsAndExpectsPassedFlag) = 0;
@@ -1463,7 +1493,10 @@ private:
     ///Method to be run for all found Runnable instances
     /**\returns true on TC success, false on TC failure*/
     bool RunTest(FullContextForTestSuite& fullContextForTestSuite){
-        FullContextForTestCase fullContextForTestCase(Runner_CurrentTestName(), fullContextForTestSuite);
+        FullContextForTestCase fullContextForTestCase(
+            Runner_CurrentTestName(), fullContextForTestSuite,
+            file, line
+        );
 
         return fullContextForTestCase.ExecuteTestCase(
             [&](bool& allAssertsAndExpectsPassedFlag)
@@ -1471,6 +1504,8 @@ private:
         );
     }
 
+    std::string file;
+    unsigned line;
 };
 
 
@@ -1522,7 +1557,7 @@ private:
 
         bool totalTestCasesFound = 0;
 
-        //all test casesin the test suite shall be in the same file
+        //all test cases in the test suite shall be in the same file
         std::string sameFileNameForTCSanityCheck;
         //track line numbers of test cases to prevent same TC from being executed several times
         std::set<unsigned> executedLineNumbersForSanityCheck;
