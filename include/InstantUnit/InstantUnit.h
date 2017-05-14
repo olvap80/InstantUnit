@@ -182,7 +182,7 @@ Disclaimer: all samples here are just for illustration purposes and they are
                          * * *
 
 
-Copyright (c) 2015, Pavlo M, https://github.com/olvap80
+Copyright (c) 2015-2017, Pavlo M, https://github.com/olvap80
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -226,7 +226,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <type_traits>
 #include <set>
 
-
+//______________________________________________________________________________
 //##############################################################################
 //Macros for creating and grouping tests
 //##############################################################################
@@ -247,9 +247,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             :   SimpleStandaloneTestRunner(fileWherePlaced, lineWhereStarts) {} \
     protected: \
         /*Test code will go here, called automatically from SimpleStandaloneTestRunner*/ \
-        virtual void Runner_DoTest(bool& allAssertsAndExpectsPassedFlag) override; \
+        void Runner_DoTest(bool& allAssertsAndExpectsPassedFlag) override; \
         \
-        virtual const char* Runner_CurrentTestName() const override \
+        const char* Runner_CurrentTestName() const override \
             { return testNameString; } \
     }; \
     /*Corresponding static (!) instance to be part of the run*/ \
@@ -265,14 +265,21 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     class IU_CAT_ID(TestSuite_,__LINE__): \
         private InstantUnit::details::TestSuiteRunner \
     { \
+    public: \
+        IU_CAT_ID(TestSuite_,__LINE__)( \
+            const std::string& fileWherePlaced, \
+            unsigned lineWhereStarts \
+        ) \
+            :   TestSuiteRunner(fileWherePlaced, lineWhereStarts) {} \
+    protected: \
         /*Test code will go here, called automatically from SimpleStandaloneTestRunner*/ \
-        virtual void Runner_DoNextTest(const Runner_OnTestCase& runner_OnTestCase) override; \
+        void Runner_DoNextTest(const Runner_OnTestCase& runner_OnTestCase) override; \
         \
-        virtual const char* Runner_CurrentTestSiuteName() const override \
+        const char* Runner_CurrentTestSiuteName() const override \
             { return testSuiteNameString; } \
     }; \
     /*Corresponding static (!) instance to be part of the run*/ \
-    static IU_CAT_ID(TestSuite_,__LINE__) IU_CAT_ID(TestSuiteInstance_,__LINE__); \
+    static IU_CAT_ID(TestSuite_,__LINE__) IU_CAT_ID(TestSuiteInstance_,__LINE__)(__FILE__, __LINE__); \
     /*Test Suite body will follow below*/ \
     void IU_CAT_ID(TestSuite_,__LINE__)::Runner_DoNextTest(const Runner_OnTestCase& runner_OnTestCase)
 
@@ -326,7 +333,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///Check for conditions that break/corrupt Test Case or Test Suite on failure
 /**This kind of check can fail only in exceptional cases
    and is intended to ensure that test environment is not broken.
-   The difference between SANITY_CHECK and ASSERT if that
+   The difference between SANITY_CHECK and ASSERT is that
    SANITY_CHECK does not write anything to output for "passed" condition.
    Also one can place SANITY_CHECK to Setup sections
    (and to Teardown section, but do this
@@ -352,8 +359,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         return InstantUnit::RunTests(argc, argv); \
     }
 
+//______________________________________________________________________________
 //##############################################################################
-//Predefined predicates, running tests options, reporting support
+//Predefined predicates, running tests options, reporting support, etc
 //##############################################################################
 
 namespace InstantUnit{
@@ -838,9 +846,12 @@ public:
 
 } //namespace InstantUnit
 
-/*=============================================================================
-*  Implementation details
+//______________________________________________________________________________
+//##############################################################################
+/*==============================================================================
+*  Implementation details follow                                               *
 *=============================================================================*/
+//##############################################################################
 
 //Expand and concatenate macro arguments into combined identifier
 #define IU_CAT_ID(a,b) IU_CAT_ID_EXPANDED_HELPER(a,b)
@@ -1123,7 +1134,7 @@ public:
                 bool()
             > TestCaseExecutorFunction;
 
-    ///
+    ///Iterate over available test cases in test suite
     /**\returns empty function (nullptr) when iteration completes*/
     typedef std::function<
                 TestCaseExecutorFunction()
@@ -1152,6 +1163,7 @@ public:
             }
             catch(const AssertCheckFailed&){
                 //That was ASSERT not included in any Test Case body (report wrong usage)
+
             }
             catch(const SanityCheckFailed&){
                 //That was SANITY at Test Suite level (in setup or teardown sections of TC)
@@ -1299,19 +1311,20 @@ public:
         catch(const AssertCheckFailed&){
             //Assert failed inside Test Case
             //TODO: report failure
+            //(and continue execution of other TCs!)
         }
         catch(const SanityCheckFailed&){
             //Sanity failed inside Test Case
             //TODO: report failure
-            //(and continue execution of other TCs)
+            //(and continue execution of other TCs!)
         }
         catch(const std::exception& e){
             //TODO: Report exception detected
-            //(and continue execution of other TCs)
+            //(and continue execution of other TCs!)
         }
         catch(...){
             //TODO: Report unknown exception detected at Test Case level
-            //(and continue execution of other TCs)
+            //(and continue execution of other TCs!)
         }
         return false;
     }
@@ -1511,6 +1524,8 @@ private:
             file, line
         );
 
+        /* TC Body is executed inside FullContextForTestCase
+          to collect execution results/stats in that context */
         return fullContextForTestCase.ExecuteTestCase(
             [&](bool& allAssertsAndExpectsPassedFlag)
                 { Runner_DoTest(allAssertsAndExpectsPassedFlag); }
@@ -1598,7 +1613,8 @@ private:
 
         /*Call Runner_DoNextTest number of times to execute each nested TC
           (Note: each time different TC is executed) */
-        /*while( StateCompleted != state ){
+#if 0
+        while( StateCompleted != state ){
             try{
                 bool testCaseResult = false;
 
@@ -1641,7 +1657,8 @@ private:
                 //Report unknown exception detected at Test Suite level
             }
             return false;
-        }*/
+        }
+#endif
         return true;
     }
 
