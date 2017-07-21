@@ -12,7 +12,7 @@ Simplest usage sample:
     #include "InstantUnit/InstantUnit.h"
     #include <vector>
 
-    TEST("My test name"){
+    TEST("Basic vector operations"){ //test case name here
         //Setup statements (local for this test, not shared with others)
         std::vector<int> v;
         v.push_back(10);
@@ -69,7 +69,13 @@ It is possible to write a condition to be checked directly inside the ASSERT or 
 @endcode
 
 but when condition fails there will be no additional information "why failed".
-TODO: output sample assuming x = 2 and y = 4.2.
+Output sample assuming x = 2 and y = 4.2.
+
+@code
+TBD
+    Condition failed: x > 3
+    Condition failed: y >= 2.9 && y <= 3.1
+@endcode
 
 Use following syntax to make InstantUnit aware of the values being tested:
 
@@ -80,7 +86,13 @@ Use following syntax to make InstantUnit aware of the values being tested:
 
 Now value of x will go to the test output, and arguments passed to predicate
 are printed to simplify debugging on failure.
-TODO: output sample assuming x = 2 and y = 4.2.
+Output sample assuming x = 2 and y = 4.2.
+
+@code
+TBD
+    Condition failed: x > 3
+    Condition failed: y >= 2.9 && y <= 3.1
+@endcode
 
 Note: InstantUnit::IsNear, from the sample above, is a predicate built
 into the InstantUnit framework, but you can write your own:
@@ -99,6 +111,24 @@ into the InstantUnit framework, but you can write your own:
     }
     ...
 @endcode
+
+One can also check function/method call results with argument tracing
+using simple statement like:
+
+@code
+    int GCD(int v1, int v2){
+        // ... find GCD here
+    }
+    ...
+    TEST("Test GCD function"){
+        EXPECT(GCD)(20, 30) == 10;
+        EXPECT(GCD)(40, 60) == 20;
+        EXPECT(GCD)(100, 75) == 25;
+    }
+    ...
+@endcode
+
+Any failure will trace both API call, actual arguments, condition and compared value.
 
 More complex (but very useful) approach
 is to add shared common Setup and Teardown.
@@ -144,7 +174,7 @@ Sample:
     #include "InstantUnit/InstantUnit.h"
     #include <vector>
 
-    TEST_SUITE("General std::vector teting"){
+    TEST_SUITE("General std::vector testing"){
         //Setup code to be executed before every Test Case in the Suite
         std::vector<int> v;
         v.push_back(10);
