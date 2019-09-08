@@ -21,13 +21,13 @@ Simplest usage sample:
 
         //On failure those ASSERTs will end current Test Case
         ASSERT( !v.empty() );
-        ASSERT(v.size()) == 3;
-        ASSERT(v.capacity()) > 0;
+        ASSERT( v.size() == 3 );
+        ASSERT( v.capacity() > 0 );
 
         //EXPECTs will still continue Test, even after failure
-        EXPECT(v.front()) == 10;
-        EXPECT(v[1]) == 20;
-        EXPECT(v.back()) == 31
+        EXPECT( v.front() == 10 );
+        EXPECT( v[1] == 20 );
+        EXPECT( v.back() == 31 );
     }
 
     MAIN_RUN_TESTS
@@ -212,7 +212,7 @@ Disclaimer: all samples here are just for illustration purposes and they are
                          * * *
 
 
-Copyright (c) 2015-2017, Pavlo M, https://github.com/olvap80
+Copyright (c) 2015-2019, Pavlo M, https://github.com/olvap80
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -1202,6 +1202,7 @@ public:
         }
 
         allNestedTCSucceeded = allNestedTCSucceeded && testCaseExecutionResult;
+        return allNestedTCSucceeded;
     }
 
     void OnAfterLastTestCase(){
