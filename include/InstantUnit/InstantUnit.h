@@ -249,6 +249,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstddef>
 #include <cstdlib>
 #include <cmath>
+#include <ctime>
 #include <stdexcept>
 #include <string>
 #include <chrono>

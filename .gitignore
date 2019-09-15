@@ -2,6 +2,11 @@
 *.layout
 *.depend
 *.cscope_file_list
+*.sdf
+*.suo
+*.opensdf
+Debug/
+Release/
 
 # Build results
 [Bb]in/
