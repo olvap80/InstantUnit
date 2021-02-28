@@ -396,7 +396,18 @@ inline bool IsBetween(T val, T fromInclusive, T toInclusive){
     return val >= fromInclusive && val <= toInclusive;
 }
 
-
+///Test provided callback throws exception
+/** TODO: sample for lambda */
+template<class Exception>
+inline bool Throws(std::function<void()> callbackWrapper){
+    try{
+        callbackWrapper()
+    }
+    catch(const Exception& e){
+        return true;
+    }
+    return false;
+}
 
 //=============================================================================
 //Running tests ---------------------------------------------------------------
