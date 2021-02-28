@@ -3,7 +3,7 @@
 
 To use just include this header.
 There are no other dependencies then standard libraries,
-no installation needed, simple copy-paste of this single file will also work :)
+no installation needed, simple copy-pasting this single file will also work :)
 
 Simplest usage sample:
 
@@ -55,43 +55,45 @@ Here:
 Note1: Both ASSERT and EXPECT macro are intended to produce test output
        and update test execution statistics.
 
-Note2: there are also SANITY_CHECK and CRITICAL_CHECK macro to ensure
+Note2: there is SANITY macro to ensure
        "critical conditions", that do not produce any test output when passed,
        but scream loudly on failure.
        More details in corresponding documentation below.
 
 
-It is possible to write a condition to be checked directly inside the ASSERT or EXPECT:
+Condition to be checked is written directly inside the ASSERT or EXPECT macro:
 
 @code
-    EXPECT(x > 3);
-    EXPECT(y >= 2.9 && y <= 3.1);
+    EXPECT( x > 3 );
+    EXPECT( y >= 2.9 );
+    EXPECT( y <= 3.1 );
 @endcode
 
-but when condition fails there will be no additional information "why failed".
-Output sample assuming x = 2 and y = 4.2.
+And when condition fails there will be additional information "why failed".
+Output sample for above assuming x = 2 and y = 4.2:
 
 @code
-TBD
-    Condition failed: x > 3
-    Condition failed: y >= 2.9 && y <= 3.1
+    /path/to/source.cpp(42): fail of EXPECT(x > 3)
+      FAIIED condition is (2 > 3)
+    
+    /path/to/source.cpp(44): fail of EXPECT(x > 3)
+      FAILED condition is (4.2 < 3)
 @endcode
 
-Use following syntax to make InstantUnit aware of the values being tested:
+Also one can use predicates and InstantUnit 
+will be aware of the values being tested:
 
 @code
-    EXPECT(x) > 3; //here InstantUnit is aware that we are comparing x with 3
-    EXPECT(InstantUnit::IsNear)(y, 3, 0.1); //all parameters are traceable
+    EXPECT(InstantUnit::IsNear)(x, y, 0.1); //all parameters are traceable
 @endcode
 
-Now value of x will go to the test output, and arguments passed to predicate
-are printed to simplify debugging on failure.
-Output sample assuming x = 2 and y = 4.2.
+Here arguments passed to the predicate
+will be printed to simplify debugging on failure.
+Output sample assuming x = 2 and y = 4.2:
 
 @code
-TBD
-    Condition failed: x > 3
-    Condition failed: y >= 2.9 && y <= 3.1
+    /path/to/source.cpp(42): fail of EXPECT(InstantUnit::IsNear)(x, y, 0.1)
+      FAILED predicate is InstantUnit::IsNear(2, 4.2, 0.1)
 @endcode
 
 Note: InstantUnit::IsNear, from the sample above, is a predicate built
@@ -112,24 +114,6 @@ into the InstantUnit framework, but you can write your own:
     ...
 @endcode
 
-One can also check function/method call results with argument tracing
-using simple statement like:
-
-@code
-    int GCD(int v1, int v2){
-        // ... find GCD here
-    }
-    ...
-    TEST("Test GCD function"){
-        EXPECT(GCD)(20, 30) == 10;
-        EXPECT(GCD)(40, 60) == 20;
-        EXPECT(GCD)(100, 75) == 25;
-    }
-    ...
-@endcode
-
-Any failure will trace both API call, actual arguments, condition and compared value.
-
 More complex (but very useful) approach
 is to add shared common Setup and Teardown.
 Please notice how those Setup and Teardown are located:
@@ -137,7 +121,7 @@ Please notice how those Setup and Teardown are located:
 - just write your statements according to the template below:
 
 @code
-    TEST_SUITE("My Suite name"){ // ... __LINE__##_Run(NU::TestCaseRunner& NU_TestCaseRunner) {
+    TEST_SUITE("My Suite name"){ // ... ::Runner_DoNextTest(const Runner_OnTestCase& runner_OnTestCase) {
         //optional Setup code to be executed before every Test Case in the Suite
         ... //declare variables, setup environment, etc
 
@@ -155,7 +139,7 @@ Please notice how those Setup and Teardown are located:
     }
 @endcode
 
-Here Test Suite is not only a collection of Test Cases but also a way
+Such Test Suite is not only a collection of some Test Cases but also a way
 to surround every Test Case in that collection with the Setup and Teardown code.
 
 Setup code from the Test Suite is executed before each Test Case like when
@@ -182,10 +166,10 @@ Sample:
         v.push_back(31);
         //Note: now v with three filled items will be visible to every TEST_CASE below
 
-        SANITY_FOR_TEST_SUITE( !v.empty() );
+        SANITY( !v.empty() );
 
         TEST_CASE("Test const operations"){
-            SANITY_FOR_TEST_CASE(v.size()) == 3;
+            ASSERT(v.size()) == 3;
 
             //Expects will still continue Test after failure
             EXPECT(v.front()) == 10;
@@ -212,7 +196,7 @@ Disclaimer: all samples here are just for illustration purposes and they are
                          * * *
 
 
-Copyright (c) 2015-2019, Pavlo M, https://github.com/olvap80
+Copyright (c) 2015-2021, Pavlo M, https://github.com/olvap80
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -257,10 +241,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <type_traits>
 #include <set>
 
+
 //______________________________________________________________________________
 //##############################################################################
 //Macros for creating and grouping tests
 //##############################################################################
+
 
 ///Simple named Test (standalone Test Case without shared Setup/Teardown stuff)
 /** Place Test code in braces after TEST macro.
@@ -287,6 +273,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     static IU_CAT_ID(Test_,__LINE__) IU_CAT_ID(TestInstance_,__LINE__)(__FILE__, __LINE__); \
     /*Test body will follow below*/ \
     void IU_CAT_ID(Test_,__LINE__)::Runner_DoTest(bool& allAssertsAndExpectsPassedFlag)
+
 
 ///Named group of Test Cases tied together to support common Setup/Teardown
 /**Place Test Setup at top, then Test Cases and then Teardown at bottom.
@@ -325,30 +312,24 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
   Following usages are possible:
   @code
-    ASSERT(expression);                       //verify expression is not 0 (not false)
-    ASSERT(expression) == valueToCompareWith; //verify expression == valueToCompareWith
-    ASSERT(expression) != valueToCompareWith; //verify expression != valueToCompareWith
-    ASSERT(expression) <  valueToCompareWith; //verify expression <  valueToCompareWith
-    ASSERT(expression) <= valueToCompareWith; //verify expression <= valueToCompareWith
-    ASSERT(expression) >  valueToCompareWith; //verify expression >  valueToCompareWith
-    ASSERT(expression) >= valueToCompareWith; //verify expression >= valueToCompareWith
+    ASSERT( expression );                       //verify expression is not 0 (not false)
+    ASSERT( expression == valueToCompareWith ); //verify expression == valueToCompareWith
+    ASSERT( expression != valueToCompareWith ); //verify expression != valueToCompareWith
+    ASSERT( expression <  valueToCompareWith ); //verify expression <  valueToCompareWith
+    ASSERT( expression <= valueToCompareWith ); //verify expression <= valueToCompareWith
+    ASSERT( expression >  valueToCompareWith ); //verify expression >  valueToCompareWith
+    ASSERT( expression >= valueToCompareWith ); //verify expression >= valueToCompareWith
   @endcode
 
   It is also possible to call predicate or function using following syntax:
   @code
     ASSERT(f)(args);                       //verify f(args) is not 0 (not false)
-    ASSERT(f)(args) == valueToCompareWith; //verify f(args) == valueToCompareWith
-    ASSERT(f)(args) != valueToCompareWith; //verify f(args) != valueToCompareWith
-    ASSERT(f)(args) <  valueToCompareWith; //verify f(args) <  valueToCompareWith
-    ASSERT(f)(args) <= valueToCompareWith; //verify f(args) <= valueToCompareWith
-    ASSERT(f)(args) >  valueToCompareWith; //verify f(args) >  valueToCompareWith
-    ASSERT(f)(args) >= valueToCompareWith; //verify f(args) >= valueToCompareWith
   @endcode
 
   Note1: only comparison operations are allowed
          and ASSERT(expression) always goes first.
   Note2: ASSERT can only be placed inside TEST or TEST_CASE */
-#define ASSERT(expression)
+#define ASSERT(...)
 //
 
 
@@ -357,19 +338,19 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /** Just mark surrounding Test Case as failed on "verify fail",
     but Test Case execution continues.
     Usage is similar to ASSERT from above */
-#define EXPECT(expression) \
+#define EXPECT(...) \
     InstantUnit::
 
 
 ///Check for conditions that break/corrupt Test Case or Test Suite on failure
 /**This kind of check can fail only in exceptional cases
    and is intended to ensure that test environment is not broken.
-   The difference between SANITY_CHECK and ASSERT is that
-   SANITY_CHECK does not write anything to output for "passed" condition.
-   Also one can place SANITY_CHECK to Setup sections
+   The difference between SANITY and ASSERT is that
+   SANITY does not write anything to output for "passed" condition.
+   Also one can place SANITY to Setup sections
    (and to Teardown section, but do this
     only after all the Teardown actions are actually done).*/
-#define SANITY_CHECK(condition)
+#define SANITY(...)
 
 ///Check for conditions that break/corrupt entire process on failure
 /** Intended to make "Fatal" check macro for "critical condition checks".
@@ -378,7 +359,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  and cannot continue.
  Once SANITY failed, no more test can be executed in the process (exit process).
  Usage is similar to ASSERT and EXPECT from above.*/
-#define CRITICAL_CHECK(condition)
+#define CRITICAL(...)
 
 
 
@@ -389,6 +370,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     { \
         return InstantUnit::RunTests(argc, argv); \
     }
+
 
 //______________________________________________________________________________
 //##############################################################################
@@ -877,12 +859,14 @@ public:
 
 } //namespace InstantUnit
 
+
 //______________________________________________________________________________
 //##############################################################################
 /*==============================================================================
 *  Implementation details follow                                               *
 *=============================================================================*/
 //##############################################################################
+
 
 //Expand and concatenate macro arguments into combined identifier
 #define IU_CAT_ID(a,b) IU_CAT_ID_EXPANDED_HELPER(a,b)
@@ -1400,6 +1384,7 @@ private:
     Reporter& reporter;
 };*/
 
+
 ///Helper base to collect list of static/global class instances
 /**Every derived instance of type DerivedT will be a part of the global list.
  For each DerivedT we have own corresponding list of instances.
@@ -1495,6 +1480,7 @@ typedef std::function<
         > MakeTestCaseExecutorFunction;
 
 */
+
 
 ///Base class to be executed while running tests
 /** Collect those tests, that are part of the "DEFAULT" test suite*/
@@ -1685,6 +1671,8 @@ private:
 
 } //namespace InstantUnit::details
 
+
+//implementation, for doc see above
 inline bool RunTests()
 {
     details::FullContextForTestSession fullContextForTestSession;
@@ -1722,6 +1710,8 @@ inline bool RunTests()
     return allPassed;
 }
 
+
+//implementation, for doc see above
 int RunTets(int argc, char *argv[]){
     //TODO invent and process command line options (like filtering, etc)
     return 0;
